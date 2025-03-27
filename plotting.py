@@ -12,9 +12,10 @@ from scipy import stats
 import pandas as pd
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from scipy.optimize import curve_fit
 
 from utils import *
-from model_functions import *
+# from model_functions import *
 
 
 def old_letter_on_subplot(ax, letter, x_rel=-0.2, y_rel=1.15, fs=7):

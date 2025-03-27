@@ -10,6 +10,7 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 
 from utils import *
+from plotting import barplot_annotate_brackets
 
 #######################################################################
 
@@ -529,3 +530,124 @@ def modelrun_fit(data, init=[1, 1, 1, 1, 1, 1], f=modelrun_crit,
                            mu_t_bounds, sigma_t_bounds,
                            mu_R_bounds, sigma_R_bounds))
     return res.x, res.fun
+
+
+def process_error_idle_time(animalList, sessionList, n_simul=10000):
+    N_bins = 6
+    N_avg = 4
+    _alpha, _alpha_t, _alpha_u, _gamma, _gamma_t, _gamma_u, _, _, _, _, _, _ = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
+    blocks =  [[0, 300],  [300, 600],  [600, 900],  [900, 1200],
+                [1200, 1500],  [1500, 1800],  [1800, 2100],  [2100, 2400],
+                [2400, 2700],  [2700, 3000],  [3000, 3300],  [3300, 3600]]
+    error = {}
+
+    for animal in animalList:
+        print(f'Computing for {animal}')
+        sessions = matchsession(animal, sessionList)
+        data = [[],[],[],[],[],[],[],[],[],[],[],[]]
+        for i, session in enumerate(sessions):
+            example_idleTimeInLeftBin, example_idleTimeInRightBin = get_from_pickle(root, animal, session, name="timeinZone.p")
+            for j in range(0, 12):
+                data[j] = np.append(data[j], example_idleTimeInLeftBin[j]+example_idleTimeInRightBin[j])
+    
+        ex_alpha = _alpha[animal]['120']
+        ex_alpha_t = _alpha_t[animal]['120']
+        ex_alpha_u = _alpha_u[animal]['120']
+        ex_gamma = _gamma[animal]['120']
+        ex_gamma_t = _gamma_t[animal]['120']
+        ex_gamma_u = _gamma_u[animal]['120']
+
+        ALPHA = np.zeros((N_bins, N_avg))
+        GAMMA = np.zeros((N_bins, N_avg))
+        for bin in range(N_bins):
+            for avg in range(N_avg):
+                ALPHA[bin, avg] = ex_alpha + bin*ex_alpha_t + avg*ex_alpha_u
+                GAMMA[bin, avg] = ex_gamma + bin*ex_gamma_t + avg*ex_gamma_u
+
+        a = []
+        g = []
+        for i in range(6):
+            a.append(.9*ALPHA[i][0]+0.1*ALPHA[i][1])
+            a.append(.9*ALPHA[i][-1]+0.1*ALPHA[i][-2])
+            g.append(.9*GAMMA[i][0]+0.1*GAMMA[i][1])
+            g.append(.9*GAMMA[i][-1]+0.1*GAMMA[i][-2])
+
+
+        error[animal] = np.zeros((n_simul, 12))
+        for _ in range(n_simul):
+            # if _ // 1000 == 0:
+            #     print(f'Rat: {animal} || {_}/{n_simul}')
+            res = [np.median(generate_idle_time(a[i], g[i], len(data[i]), seed=_)) for i in range(len(blocks))]   
+            error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
+    
+    return error
+
+
+
+def process_error_crossing_time(animalList, sessionList, n_simul=10000):
+    N_bins = 6
+    N_avg = 4
+    _, _, _, _, _, _, _mu, _mu_t, _mu_u, _sigma, _sigma_t, _sigma_u = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
+    blocks =  [[0, 300],  [300, 600],  [600, 900],  [900, 1200],
+                [1200, 1500],  [1500, 1800],  [1800, 2100],  [2100, 2400],
+                [2400, 2700],  [2700, 3000],  [3000, 3300],  [3300, 3600]]
+    error = {}
+
+    for animal in animalList:
+        print(f'Computing for {animal}')
+        sessions = matchsession(animal, sessionList)
+        data = [[],[],[],[],[],[],[],[],[],[],[],[]]
+        for i, session in enumerate(sessions):
+            example_runningTimeInLeftBin, example_runningTimeInRightBin = get_from_pickle(root, animal, session, name="timeRun.p")
+            for j in range(0, 12):
+                data[j] = np.append(data[j], example_runningTimeInLeftBin[j]+example_runningTimeInRightBin[j])
+    
+        ex_mu = _mu[animal]['120']
+        ex_mu_t = _mu_t[animal]['120']
+        ex_mu_u = _mu_u[animal]['120']
+        ex_sigma = _sigma[animal]['120']
+        ex_sigma_t = _sigma_t[animal]['120']
+        ex_sigma_u = _sigma_u[animal]['120']
+
+
+        MU = np.zeros((N_bins, N_avg))
+        SIGMA = np.zeros((N_bins, N_avg))
+        for bin in range(N_bins):
+            for avg in range(N_avg):
+                MU[bin, avg] = ex_mu + bin*ex_mu_t + avg*ex_mu_u
+                SIGMA[bin, avg] = ex_sigma + bin*ex_sigma_t + avg*ex_sigma_u
+
+        m = []
+        s = []
+        for i in range(6):
+            m.append((.9*MU[i][0] + 0.1*MU[i][1]))
+            m.append((.9*MU[i][-1] + 0.1*MU[i][-2]))
+            s.append((.9*SIGMA[i][0] + 0.1*SIGMA[i][1]))
+            s.append((.9*SIGMA[i][-1] + 0.1*SIGMA[i][-2]))
+
+        error[animal] = np.zeros((n_simul, 12))
+        for _ in range(n_simul):
+            res = [np.median(generate_running_time(m[i], s[i], len(data[i]), seed=_)) for i in range(len(blocks))]
+            error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
+    
+    return error
+
+
+def LLratio_vs_complete(ablation_losses, keys, animalList, ax=None):
+    if ax is None: fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+    LL_sums = [np.sum([ablation_losses[animal][key] for animal in animalList]) for key in keys]
+    LL_complete = LL_sums[0]
+    LL_reduced = LL_sums[1:]
+    dParams = [np.sum(key) for key in keys][1:]
+
+    p_vals = np.zeros(len(dParams))
+    for i, (reducted_model_loss, df) in enumerate(zip(LL_reduced, dParams)):
+        LR = -2*(reducted_model_loss - LL_complete)
+        p_vals[i] = stats.chi2.sf(LR, df)
+
+    sig, corrected_pvals, alphabonf = multipletests_bonferroni(p_vals)
+    for i, p_val in enumerate(corrected_pvals):
+        barplot_annotate_brackets(ax, 0, i+1, p_val, np.arange(1, 7), 
+                                  [-LL_complete]*6, 
+                                  dh=0.15+i*.1, barh=.025, maxasterix=None)
+
