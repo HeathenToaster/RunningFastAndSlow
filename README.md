@@ -5,7 +5,10 @@ This repository contains cleaned-up code to process and generate the figures for
 
 In this repository, you'll find:
 - One `.ipynb` notebook for each main figure and each supplementary figure.
-- `.py` files containing reusable functions used throughout the analysis.
+- `.py` files containing reusable functions used throughout the analysis (processing, plotting, statistics, utilities, etc.).
+- a `Figures` folder with illustrations and style sheet.
+- a `Figures_paper` folder with the main and supplementary figures of the paper in `.png` and `.svg` formats.
+- a `picklejar` folder containing processed results
 
 ## Compatibility
 The code was developed using **Python 3.7.11**, which is now **end-of-life (EOL)**. While it runs with more recent Python versions, it has not been extensively tested and may produce deprecation warnings or errors.
