@@ -532,7 +532,7 @@ def modelrun_fit(data, init=[1, 1, 1, 1, 1, 1], f=modelrun_crit,
     return res.x, res.fun
 
 
-def process_error_idle_time(animalList, sessionList, n_simul=10000):
+def process_error_idle_time(root, animalList, sessionList, n_simul=10000):
     N_bins = 6
     N_avg = 4
     _alpha, _alpha_t, _alpha_u, _gamma, _gamma_t, _gamma_u, _, _, _, _, _, _ = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
@@ -584,7 +584,7 @@ def process_error_idle_time(animalList, sessionList, n_simul=10000):
 
 
 
-def process_error_crossing_time(animalList, sessionList, n_simul=10000):
+def process_error_crossing_time(root, animalList, sessionList, n_simul=10000):
     N_bins = 6
     N_avg = 4
     _, _, _, _, _, _, _mu, _mu_t, _mu_u, _sigma, _sigma_t, _sigma_u = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
