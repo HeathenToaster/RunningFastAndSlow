@@ -1,14 +1,17 @@
-# RunningFastAndSlow
+# RunningFastAndSlow 🐀
 
 ## Overview
-This repository contains cleaned-up code to process and generate the figures for the preprint [Running, Fast and Slow: The Dorsal Striatum Sets the Cost of Movement During Foraging](https://www.biorxiv.org/content/10.1101/2024.05.31.596850v1).
+This repository contains code to process and generate the figures for the preprint [Running, Fast and Slow: The Dorsal Striatum Sets the Cost of Movement During Foraging](https://www.biorxiv.org/content/10.1101/2024.05.31.596850v1). The code is provided as is—it should function correctly and produce the expected results, but it could benefit from refactoring for improved readability, maintainability, and performance.
 
-In this repository, you'll find:
-- One `.ipynb` notebook for each main figure and each supplementary figure.
-- `.py` files containing reusable functions used throughout the analysis (processing, plotting, statistics, utilities, etc.).
-- a `Figures` folder with illustrations and style sheet.
-- a `Figures_paper` folder with the main and supplementary figures of the paper in `.png` and `.svg` formats.
-- a `picklejar` folder containing processed results
+## Contents
+- `.ipynb` notebooks for each main and supplementary figure.
+- Two `.ipynb` notebooks for data analysis:
+  - `process_data.ipynb`: Processes raw data.
+  - `model_fitting.ipynb`: Fits models to the data.
+- `.py` files containing reusable functions for processing, plotting, statistics, and utilities.
+- `Figures/` folder with illustrations and a style sheet.
+- `Figures_paper/` folder containing the final main and supplementary figures in `.png` and `.svg` formats.
+- `picklejar/` folder with preprocessed results.
 
 ## Compatibility
 The code was developed using **Python 3.7.11**, which is now **end-of-life (EOL)**. While it runs with more recent Python versions, it has not been extensively tested and may produce deprecation warnings or errors.
@@ -30,4 +33,6 @@ env\Scripts\activate  # On Windows
 # Install dependencies
 pip install -r requirements.txt
 ```
+
+Ensure that all required packages are installed before running the notebooks.
 

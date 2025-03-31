@@ -299,19 +299,19 @@ def model_compare(params, *args, robustness_param=1e-20):
 def modelwald_fit(data, init=[2, 0, .5, 0, 0, 0, 0, 0, 0],
                   f=model_crit, N_bins=6, N_avg=4, N_params=2,
                   alpha_t_fixed=False, gamma_t_fixed=False,
-                  alpha_R_fixed=False, gamma_R_fixed=False,
+                  alpha_U_fixed=False, gamma_U_fixed=False,
                   ):
     """fit full model to data"""
     params_init = np.array(init)
     alpha_t_bounds = (None, None) if not alpha_t_fixed else (0, 1e-8)
     gamma_t_bounds = (None, None) if not gamma_t_fixed else (0, 1e-8)
-    alpha_R_bounds = (None, None) if not alpha_R_fixed else (0, 1e-8)
-    gamma_R_bounds = (None, None) if not gamma_R_fixed else (0, 1e-8)
+    alpha_U_bounds = (None, None) if not alpha_U_fixed else (0, 1e-8)
+    gamma_U_bounds = (None, None) if not gamma_U_fixed else (0, 1e-8)
 
     res = minimize(f, params_init, args=(data, [N_bins, N_avg], N_params),
                    bounds=((0, None), (0, 1e-8), (0, None),
                    alpha_t_bounds, (0, 1e-8), gamma_t_bounds,
-                   alpha_R_bounds, (0, 1e-8), gamma_R_bounds))
+                   alpha_U_bounds, (0, 1e-8), gamma_U_bounds))
     return res.x, res.fun
 
 
@@ -518,17 +518,17 @@ def modelrun_compare(params, *args, robustness_param=1e-20):
 def modelrun_fit(data, init=[1, 1, 1, 1, 1, 1], f=modelrun_crit,
                  N_bins=6, N_avg=4, N_params=2,
                  mu_t_fixed=False, sigma_t_fixed=False,
-                 mu_R_fixed=False, sigma_R_fixed=False):
+                 mu_U_fixed=False, sigma_U_fixed=False):
     params_init = np.array(init)
     mu_t_bounds = (None, None) if not mu_t_fixed else (0, 1e-8)
     sigma_t_bounds = (None, None) if not sigma_t_fixed else (0, 1e-8)
-    mu_R_bounds = (None, None) if not mu_R_fixed else (0, 1e-8)
-    sigma_R_bounds = (None, None) if not sigma_R_fixed else (0, 1e-8)
+    mu_U_bounds = (None, None) if not mu_U_fixed else (0, 1e-8)
+    sigma_U_bounds = (None, None) if not sigma_U_fixed else (0, 1e-8)
 
     res = minimize(f, params_init, args=(data, [N_bins, N_avg], N_params),
                    bounds=((None, None), (None, None),
                            mu_t_bounds, sigma_t_bounds,
-                           mu_R_bounds, sigma_R_bounds))
+                           mu_U_bounds, sigma_U_bounds))
     return res.x, res.fun
 
 
