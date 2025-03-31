@@ -1,5 +1,8 @@
 """This module contains a set of functions that are used
  in the analysis and preprocessing of the data."""
+"""This code is quite old, it runs fine and processes the data
+as expected but deserves a good rewrite for better readability,
+maintainability and performance."""
 
 
 import copy
@@ -169,7 +172,67 @@ def plot_acc(animal, session, posdataRight, timedataRight, bounds,
     ax.legend()
     return ax
 
+# This function plots the base trajectory of the rat. Parameters are time:
+# time data, position : X position data, lickL/R, lick data,
+# maxminstep for x and y axis, color and marker of the plot,
+# width of the axis, and x y labels
+def plot_BASEtrajectory(time, position, lickLeft, lickRight, maxminstep,
+                        maxminstep2, color=[], marker=[],
+                        linewidth=[], xyLabels=["N", "Bins"]):
 
+    plt.plot(time, position, color=color[0],
+             marker=marker[0], linewidth=linewidth[0])
+    # lick data, plot position in which the animal licked else None
+    plt.plot(time, [None if x == 0 else x for x in lickLeft], color=color[1],
+             marker=marker[1], markersize=marker[2])
+    plt.plot(time, [None if x == 0 else x for x in lickRight], color=color[1],
+             marker=marker[1], markersize=marker[2])
+
+    # plot parameters
+    traj = plt.gca()
+    traj.set_xlim(maxminstep[0] - maxminstep[2],
+                  maxminstep[1] + maxminstep[2])
+    traj.set_ylim(maxminstep2[0] - maxminstep2[2],
+                  maxminstep2[1] + maxminstep2[2])
+    traj.set_xlabel(xyLabels[1], fontsize=12, labelpad=0)
+    traj.set_ylabel(xyLabels[0], fontsize=12, labelpad=-1)
+    traj.xaxis.set_ticks_position('bottom')
+    traj.yaxis.set_ticks_position('left')
+    traj.get_xaxis().set_tick_params(direction='out', pad=2)
+    traj.get_yaxis().set_tick_params(direction='out', pad=2)
+    traj.spines['top'].set_color("none")
+    traj.spines['right'].set_color("none")
+    return traj
+
+# plot block per %reward
+def plot_figBinMean(ax, dataLeft, dataRight, color, ylim):
+    mean_left = np.mean(dataLeft)
+    mean_right = np.mean(dataRight)
+    se_left = np.std(dataLeft, ddof=1) / np.sqrt(len(dataLeft))
+    se_right = np.std(dataRight, ddof=1) / np.sqrt(len(dataRight))
+
+    ax.errorbar(0, mean_left, yerr=se_left, fmt='o', color=color[0],
+                markersize=7, capsize=5)
+    ax.errorbar(1, mean_right, yerr=se_right, fmt='o', color=color[0],
+                markersize=7, capsize=5)
+
+    ax.plot([0, 1], [mean_left, mean_right], color='black', linestyle='--', linewidth=0.8)
+
+    diff = mean_right - mean_left
+    ax.text(0.5, (mean_left + mean_right) / 2, f"diff = {diff:.2f}",
+            ha='center', va='center', fontsize=10)
+
+    ax.axvspan(-0.5, 0.5, color='grey', alpha=10/250)
+    ax.axvspan(0.5, 1.5, color='grey', alpha=90/250)
+
+    ax.set_xlim(-0.5, 1.5)
+    ax.set_ylim(ylim)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["10%\nreward", "90%\nreward"])
+    ax.set_ylabel("Value")
+    ax.set_title("Mean Difference")
+
+    return ax
 
 
 """
@@ -539,7 +602,7 @@ def fixcamglitch(time, pos, edit):
 
 
 # DATA PROCESSING FUNCTION
-def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=False, redoFig=False, printFigs=False, redoMask=False):
+def processData(root, ID, sessionIN, index, buggedSessions, redoCompute=False, redoFig=False, printFigs=False, redoMask=False):
     index = index
     animal = ID
 
@@ -573,7 +636,7 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
         sessionList = sessionIN
     else:
         sessionList = []#sorted([os.path.basename(expPath) for expPath in glob.glob(root+os.sep+animal+os.sep+"Experiments"+os.sep+"Rat*")])
-    arr[index] = 0
+
     time.sleep(0.1*(index+1))
     for sessionindex, session in enumerate(sessionList):
         figPath = root + os.sep + animal + os.sep + "Experiments" + os.sep + session + os.sep + "Figures" + os.sep + "recapFIG%s.png" %session
@@ -812,7 +875,7 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
                 fig.suptitle(session, y=0.9, fontsize=24)
                 gs = fig.add_gridspec(75, 75)
                 ax00 = fig.add_subplot(gs[0:7, 0:4])
-                ax00 = plot_peak(rawPositionX[animal, session], animal, session, leftBoundaryPeak[animal, session], rightBoundaryPeak[animal, session], kde[animal, session], [0.05, 0, 0], [0, 120, 0],  marker=[""], xyLabels=["Position (cm)", "%"])
+                ax00 = plot_peak(ax00, rawPositionX[animal, session], leftBoundaryPeak[animal, session], rightBoundaryPeak[animal, session], kde[animal, session], [0.05, 0, 0], [0, 120, 0], xyLabels=["Position (cm)", "%"])
                 ax01 = fig.add_subplot(gs[0:7, 5:75])
                 ax01 = plot_BASEtrajectoryV2(animal, session, rawTime[animal, session], running_Xs[animal, session], idle_Xs[animal, session], rawLickLeftX[animal, session], rawLickRightX[animal, session], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration'], 50, 90, 0, 22, 10],  xyLabels=["Time (min)", " ", "Position (cm)", "", "", "", 14, 12], title=[session, "", " ", "", 16], linewidth=[1.5])
                 plt.plot([0, params[animal, session]['sessionDuration']], [params[animal, session]["boundaries"][0], params[animal, session]["boundaries"][0]], ":", color='k', alpha=0.5)
@@ -846,13 +909,13 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
                 ax12.plot(yline, xline, ":", color='k')
 
                 ax20 = fig.add_subplot(gs[17:22, 0:10])
-                ax20 = plot_tracks(animal, session, XtrackRunToRight[animal, session], timeRunToRight[animal, session], params[animal, session]["boundaries"], xylim=[-0.1, 2, 0, 120], color=['paleturquoise', 'tomato'],  xyLabels=["Time (s)", "X Position (cm)", 14], title=["Tracking run to Right",  16], linewidth=[1.5])
+                ax20 = plot_tracks(ax20, XtrackRunToRight[animal, session], timeRunToRight[animal, session], params[animal, session]["boundaries"], xylim=[-0.1, 2, 0, 120], color=['paleturquoise', 'tomato'],  xyLabels=["Time (s)", "X Position (cm)", 14], title=["Tracking run to Right",  16])
                 ax21 = fig.add_subplot(gs[17:22, 15:25])
-                ax21 = plot_tracks(animal, session, XtrackRunToLeft[animal, session], timeRunToLeft[animal, session], params[animal, session]["boundaries"], xylim=[-0.1, 2, 0, 120], color=['darkcyan', 'darkred'], xyLabels=["Time (s)", "", 14], title=["Tracking run to Left", 16], linewidth=[1.5])
+                ax21 = plot_tracks(ax21, XtrackRunToLeft[animal, session], timeRunToLeft[animal, session], params[animal, session]["boundaries"], xylim=[-0.1, 2, 0, 120], color=['darkcyan', 'darkred'], xyLabels=["Time (s)", "", 14], title=["Tracking run to Left", 16])
                 ax20 = fig.add_subplot(gs[17:22, 30:40])
-                ax20 = cumul_plot(speedRunToRight[animal, session], speedRunToLeft[animal, session], barplotaxes=[0, 120, 0, 1], maxminstepbin=[0, 120, 1], scatterplotaxes=[0, 0, 0, 0], color=['paleturquoise', 'darkcyan', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency Run Speed", 14, 12], title=["Cumulative Plot Good Run Speed", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax20 = cumul_plot(ax20, speedRunToRight[animal, session], speedRunToLeft[animal, session], barplotaxes=[0, 120, 0, 1], maxminstepbin=[0, 120, 1], scatterplotaxes=[0, 0, 0, 0], color=['paleturquoise', 'darkcyan', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency Run Speed", 14, 12], title=["Cumulative Plot Good Run Speed", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax21 = fig.add_subplot(gs[17:22, 45:55])
-                ax21 = distribution_plot(speedRunToRight[animal, session], speedRunToLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 120, 1], scatterplotaxes=[0.5, 2.5, 0, 120], color=['paleturquoise', 'darkcyan', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of All Run Speed", 16], linewidth=[1.5], legend=["To Right: Good Runs ", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax21 = distribution_plot(ax21, speedRunToRight[animal, session], speedRunToLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 120, 1], scatterplotaxes=[0.5, 2.5, 0, 120], color=['paleturquoise', 'darkcyan', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of All Run Speed", 16], linewidth=[1.5], legend=["To Right: Good Runs ", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
 
                 gs23 = gs[15:22, 60:75].subgridspec(5, 2)
                 ax231 = fig.add_subplot(gs23[0:2, 0:2])
@@ -871,61 +934,61 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
                 ax232.set_ylabel("time per frame (s)")
 
                 ax30 = fig.add_subplot(gs[25:30, 0:10])
-                ax30 = cumul_plot(maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 200, 0, 1], maxminstepbin=[0, 200, 1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency MAX Run Speed", 14, 12], title=["Cumulative Plot MAX Run Speed", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax30 = cumul_plot(ax30, maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 200, 0, 1], maxminstepbin=[0, 200, 1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency MAX Run Speed", 14, 12], title=["Cumulative Plot MAX Run Speed", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax31 = fig.add_subplot(gs[25:30, 15:25])
-                ax31 = distribution_plot(maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 200], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of MAX Run Speed", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax31 = distribution_plot(ax31, maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 200], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of MAX Run Speed", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
                 ax32 = fig.add_subplot(gs[25:30, 30:40])
-                ax32 = plot_speed(animal, session, instantSpeedRight[animal, session], timeRunToRight[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "X Speed (cm/s)", 14], title=["To Right" + "\n" + "To " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", 12], linewidth=[1.5])
+                ax32 = plot_speed(ax32, instantSpeedRight[animal, session], timeRunToRight[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "X Speed (cm/s)", 14], title=["To Right" + "\n" + "To " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", 12])
                 ax33 = fig.add_subplot(gs[25:30, 45:55])
-                ax33 = plot_speed(animal, session, instantSpeedLeft[animal, session], timeRunToLeft[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "", 14], title=["To Left" + "\n" + "To " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", 12], linewidth=[1.5])
+                ax33 = plot_speed(ax33, instantSpeedLeft[animal, session], timeRunToLeft[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "", 14], title=["To Left" + "\n" + "To " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", 12])
                 ax34 = fig.add_subplot(gs[25:30, 60:70])
-                ax34 = plot_speed(animal, session, instantSpeedRight[animal, session] + instantSpeedLeft[animal, session], timeRunToRight[animal, session] + timeRunToLeft[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "", 14], title=["Speed" + "\n" + " To left and to right", 12], linewidth=[0.5])
+                ax34 = plot_speed(ax34, instantSpeedRight[animal, session] + instantSpeedLeft[animal, session], timeRunToRight[animal, session] + timeRunToLeft[animal, session], [0, 0], xylim=[-0.1, 4, 0, 200], xyLabels=["Time (s)", "", 14], title=["Speed" + "\n" + " To left and to right", 12])
 
                 ax40 = fig.add_subplot(gs[35:40, 0:8])
-                ax40 = cumul_plot(maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 250, 0, 1], maxminstepbin=[0, 250, 1], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency MAX Run Speed", 14, 12], title=["CumulPlt MAXrunSpeed <TreadmillCorrected>", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax40 = cumul_plot(ax40, maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 250, 0, 1], maxminstepbin=[0, 250, 1], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed cm/s", "Cumulative Frequency MAX Run Speed", 14, 12], title=["CumulPlt MAXrunSpeed <TreadmillCorrected>", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax41 = fig.add_subplot(gs[35:40, 12:23])
-                ax41 = distribution_plot(maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 250], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. of MAXrunSpeed <TreadmillCorrected>", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax41 = distribution_plot(ax41, maxSpeedRight[animal, session], maxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 250], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Speed (cm/s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. of MAXrunSpeed <TreadmillCorrected>", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
                 ax42 = fig.add_subplot(gs[35:40, 26:34])  # where maxspeed
-                ax42 = cumul_plot(wheremaxSpeedRight[animal, session], wheremaxSpeedLeft[animal, session], barplotaxes=[0, 120, 0, 1], maxminstepbin=[0, 120, 1], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Position maxSpeed reached (cm)", "Cumulative Frequency MAX runSpeed Position", 14, 12], title=["CumulPlt MAXrunSpeed \nPosition from start of run", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax42 = cumul_plot(ax42, wheremaxSpeedRight[animal, session], wheremaxSpeedLeft[animal, session], barplotaxes=[0, 120, 0, 1], maxminstepbin=[0, 120, 1], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Position maxSpeed reached (cm)", "Cumulative Frequency MAX runSpeed Position", 14, 12], title=["CumulPlt MAXrunSpeed \nPosition from start of run", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax43 = fig.add_subplot(gs[35:40, 38:49])
-                ax43 = distribution_plot(wheremaxSpeedRight[animal, session], wheremaxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 120], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["X Position (cm)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. MAXrunSpeed \nPosition from start of run", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax43 = distribution_plot(ax43, wheremaxSpeedRight[animal, session], wheremaxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 120], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["X Position (cm)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. MAXrunSpeed \nPosition from start of run", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
                 ax44 = fig.add_subplot(gs[35:40, 52:60])  # when maxspeed
-                ax44 = cumul_plot(whenmaxSpeedRight[animal, session], whenmaxSpeedLeft[animal, session], barplotaxes=[0, 2.5, 0, 1], maxminstepbin=[0, 2.5, 0.04], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Time MAX runSpeed reached (s)", "Cumulative Frequency", 14, 12], title=["CumulPlt Time of \nMAXrunSpeed from start of run", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax44 = cumul_plot(ax44, whenmaxSpeedRight[animal, session], whenmaxSpeedLeft[animal, session], barplotaxes=[0, 2.5, 0, 1], maxminstepbin=[0, 2.5, 0.04], scatterplotaxes=[0, 0, 0, 0], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Time MAX runSpeed reached (s)", "Cumulative Frequency", 14, 12], title=["CumulPlt Time of \nMAXrunSpeed from start of run", 16], linewidth=[1.5], legend=["To Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "To Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax45 = fig.add_subplot(gs[35:40, 64:75])
-                ax45 = distribution_plot(whenmaxSpeedRight[animal, session], whenmaxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 2.5], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Time MAX runSpeed reached (s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. Time of MAXrunSpeed \nfrom start of run", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax45 = distribution_plot(ax45, whenmaxSpeedRight[animal, session], whenmaxSpeedLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 0, 0], scatterplotaxes=[0.5, 2.5, 0, 2.5], color=['lightgreen', 'darkgreen', 'tomato', 'darkred'], xyLabels=["Time MAX runSpeed reached (s)", "Direction of run", "To Right" + "\n" + water[animal, session][1], "To Left" + "\n" + water[animal, session][0], 14, 12], title=["Distr. Time of MAXrunSpeed \nfrom start of run", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
 
                 ax50 = fig.add_subplot(gs[45:50, 0:10])
-                ax50 = plot_tracks(animal, session, XtrackStayInRight[animal, session], TtrackStayInRight[animal, session], params[animal, session]["boundaries"], xylim=[-1, 10, params[animal, session]['treadmillDist']-40, params[animal, session]['treadmillDist']], color=['moccasin', 'tomato'], xyLabels=["Time (s)", "X Position (cm)", 14, 12], title=["Tracking in Right", 16], linewidth=[1.5])
+                ax50 = plot_tracks(ax50, XtrackStayInRight[animal, session], TtrackStayInRight[animal, session], params[animal, session]["boundaries"], xylim=[-1, 10, params[animal, session]['treadmillDist']-40, params[animal, session]['treadmillDist']], color=['moccasin', 'tomato'], xyLabels=["Time (s)", "X Position (cm)", 14, 12], title=["Tracking in Right", 16])
                 ax51 = fig.add_subplot(gs[45:50, 15:25])
-                ax51 = plot_tracks(animal, session, XtrackStayInLeft[animal, session], TtrackStayInLeft[animal, session], params[animal, session]["boundaries"], xylim=[-1, 10, 0, 40], color=['darkorange', 'darkred'], xyLabels=["Time (s)", "", 14, 12], title=["Tracking in Left", 16], linewidth=[1.5])
+                ax51 = plot_tracks(ax51, XtrackStayInLeft[animal, session], TtrackStayInLeft[animal, session], params[animal, session]["boundaries"], xylim=[-1, 10, 0, 40], color=['darkorange', 'darkred'], xyLabels=["Time (s)", "", 14, 12], title=["Tracking in Left", 16])
                 ax52 = fig.add_subplot(gs[45:50, 30:40])
-                ax52 = cumul_plot(timeStayInRight[animal, session], timeStayInLeft[animal, session], barplotaxes=[0, 15, 0, 1], maxminstepbin=[0, 15, 0.1], scatterplotaxes=[0, 0, 0, 0], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time in zone (s)", "Cumulative Frequency Time In Zone", 14, 12], title=["Cumulative Plot Good Time In Zone", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax52 = cumul_plot(ax52, timeStayInRight[animal, session], timeStayInLeft[animal, session], barplotaxes=[0, 15, 0, 1], maxminstepbin=[0, 15, 0.1], scatterplotaxes=[0, 0, 0, 0], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time in zone (s)", "Cumulative Frequency Time In Zone", 14, 12], title=["Cumulative Plot Good Time In Zone", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax53 = fig.add_subplot(gs[45:50, 45:60])
-                ax53 = distribution_plot(timeStayInRight[animal, session], timeStayInLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 30, 1], scatterplotaxes=[0.5, 2.5, 0, 30], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time in zone (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of All Time In Zone", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
+                ax53 = distribution_plot(ax53, timeStayInRight[animal, session], timeStayInLeft[animal, session], barplotaxes=[0, 0, 0, 0], maxminstepbin=[0, 30, 1], scatterplotaxes=[0.5, 2.5, 0, 30], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time in zone (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of All Time In Zone", 16], linewidth=[1.5], legend=["To Right: Good Runs", "To Left: Good Runs", "To Right: Bad Runs", "To Left: Bad Runs"])
 
                 ax60 = fig.add_subplot(gs[55:60, 0:8])
-                ax60 = cumul_plot(lick_arrivalRight[animal, session], lick_arrivalLeft[animal, session], barplotaxes=[0, 2, 0, 1], maxminstepbin=[0, 2, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot preDrink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax60 = cumul_plot(ax60, lick_arrivalRight[animal, session], lick_arrivalLeft[animal, session], barplotaxes=[0, 2, 0, 1], maxminstepbin=[0, 2, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot preDrink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax61 = fig.add_subplot(gs[55:60, 12:23])
-                ax61 = distribution_plot(lick_arrivalRight[animal, session], lick_arrivalLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 2], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution preDrink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
+                ax61 = distribution_plot(ax61, lick_arrivalRight[animal, session], lick_arrivalLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 2], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution preDrink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
                 ax62 = fig.add_subplot(gs[55:60, 26:34])
-                ax62 = cumul_plot(lick_drinkingRight[animal, session], lick_drinkingLeft[animal, session], barplotaxes=[0, 4, 0, 1], maxminstepbin=[0, 4, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot Drink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax62 = cumul_plot(ax62, lick_drinkingRight[animal, session], lick_drinkingLeft[animal, session], barplotaxes=[0, 4, 0, 1], maxminstepbin=[0, 4, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot Drink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax63 = fig.add_subplot(gs[55:60, 38:49])
-                ax63 = distribution_plot(lick_drinkingRight[animal, session], lick_drinkingLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 4], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of Drink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
+                ax63 = distribution_plot(ax63, lick_drinkingRight[animal, session], lick_drinkingLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 4], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of Drink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
                 ax64 = fig.add_subplot(gs[55:60, 52:60])
-                ax64 = cumul_plot(lick_waitRight[animal, session], lick_waitLeft[animal, session], barplotaxes=[0, 10, 0, 1], maxminstepbin=[0, 10, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot postDrink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
+                ax64 = cumul_plot(ax64, lick_waitRight[animal, session], lick_waitLeft[animal, session], barplotaxes=[0, 10, 0, 1], maxminstepbin=[0, 10, 0.1], scatterplotaxes=[0.5, 2.5, 0, 100], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Cumulative Frequency", 14, 12], title=["Cumulative Plot postDrink Time", 16], linewidth=[1.5], legend=["In Right: " + water[animal, session][1] + " " + str(params[animal, session]["waterRight"]) + "µL/drop", "In Left:  " + water[animal, session][0] + " " + str(params[animal, session]["waterLeft"]) + "µL/drop", water[animal, session][2], water[animal, session][3]])
                 ax65 = fig.add_subplot(gs[55:60, 64:75])
-                ax65 = distribution_plot(lick_waitRight[animal, session], lick_waitLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 10], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of postDrink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
+                ax65 = distribution_plot(ax65, lick_waitRight[animal, session], lick_waitLeft[animal, session], barplotaxes=[0, 100, 0, 1], maxminstepbin=[0, 100, 1], scatterplotaxes=[0.5, 2.5, 0, 10], color=['moccasin', 'darkorange', 'tomato', 'darkred'], xyLabels=["Time (s)", "Zone", "In Right" + "\n" + water[animal, session][1], "In Left" + "\n" + water[animal, session][0], 14, 12], title=["Distribution of postDrink Time", 16], linewidth=[1.5], legend=["In Right", "In Left", " ", " "])
 
                 if len(params[animal, session]['blocks']) > 1:
                     stat = "Med. "
                     ax70 = fig.add_subplot(gs[63:70, 0:9])
-                    ax70 = plot_figBin([nb_runsBin[animal, session][i]/(int((blocks[i][1]-blocks[i][0])/60)) for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 25], color=['k'], xyLabels=["Time (min)", "\u0023 runs / min", 14, 12], title=["", 16], linewidth=[1.5], stat=stat)
+                    ax70 = plot_figBin(ax70, [nb_runsBin[animal, session][i]/(int((blocks[i][1]-blocks[i][0])/60)) for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 25], color=['k'], xyLabels=["Time (min)", "\u0023 runs / min", 14, 12], title=["", 16], stat=stat)
                     ax72 = fig.add_subplot(gs[63:70, 20:29])
-                    ax72 = plot_figBin([speedRunToLeftBin[animal, session][i] + speedRunToRightBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 100], color=['dodgerblue'], xyLabels=["Time (min)", "Avg. run speed (cm/s)", 14, 12], title=["", 16], linewidth=[1.5], scatter=True, stat=stat)
+                    ax72 = plot_figBin(ax72, [speedRunToLeftBin[animal, session][i] + speedRunToRightBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 100], color=['dodgerblue'], xyLabels=["Time (min)", "Avg. run speed (cm/s)", 14, 12], title=["", 16], scatter=True, stat=stat)
                     ax74 = fig.add_subplot(gs[63:70, 40:49])
-                    ax74 = plot_figBin([maxSpeedRightBin[animal, session][i] + maxSpeedLeftBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 150], color=['red'], xyLabels=["Time (min)", "Average max speed (cm/s)", 14, 12], title=["", 16], linewidth=[1.5], scatter=True, stat=stat)
+                    ax74 = plot_figBin(ax74, [maxSpeedRightBin[animal, session][i] + maxSpeedLeftBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 150], color=['red'], xyLabels=["Time (min)", "Average max speed (cm/s)", 14, 12], title=["", 16], scatter=True, stat=stat)
                     ax76 = fig.add_subplot(gs[63:70, 60:69])
-                    ax76 = plot_figBin([timeStayInLeftBin[animal, session][i] + timeStayInRightBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 25], color=['orange'], xyLabels=["Time (min)", "Avg. time in sides (s)", 14, 12], title=["", 16], linewidth=[1.5], scatter=True, stat=stat)
+                    ax76 = plot_figBin(ax76, [timeStayInLeftBin[animal, session][i] + timeStayInRightBin[animal, session][i] for i in range(0, len(blocks))], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration']/60, 0, 25], color=['orange'], xyLabels=["Time (min)", "Avg. time in sides (s)", 14, 12], title=["", 16], scatter=True, stat=stat)
 
                     ax71 = fig.add_subplot(gs[63:70, 10:15])
                     ax71 = plot_figBinMean(ax71, [i/(int((params[animal, session]['blocks'][block][1]-params[animal, session]['blocks'][block][0])/60)) for block, i in enumerate(poolByReward([nb_runsBin[animal, session]], params[animal, session]["rewardP_OFF"][0], params[animal, session]['blocks'], params[animal, session]['rewardProbaBlock']))], [i/(int((params[animal, session]['blocks'][block][1]-params[animal, session]['blocks'][block][0])/60)) for block, i in enumerate(poolByReward([nb_runsBin[animal, session]], params[animal, session]["rewardP_ON"][0], params[animal, session]['blocks'], params[animal, session]['rewardProbaBlock']))], color=['k'], ylim=(0, 25))
@@ -936,7 +999,6 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
                     ax77 = fig.add_subplot(gs[63:70, 70:75])
                     ax77 = plot_figBinMean(ax77, [np.mean(i) for i in poolByReward([timeStayInRightBin[animal, session], timeStayInLeftBin[animal, session]], params[animal, session]["rewardP_OFF"][0], params[animal, session]['blocks'], params[animal, session]['rewardProbaBlock'])], [np.mean(i) for i in poolByReward([timeStayInRightBin[animal, session], timeStayInLeftBin[animal, session]], params[animal, session]["rewardP_ON"][0], params[animal, session]['blocks'], params[animal, session]['rewardProbaBlock'])], color=['orange'], ylim=(0, 25))
 
-                # %config InlineBackend.print_figure_kwargs = {'bbox_inches':None} #use % in notebook
                 ax80 = fig.add_subplot(gs[73:74, 0:60])
                 ax80.spines['top'].set_color("none")
                 ax80.spines['right'].set_color("none")
@@ -971,7 +1033,6 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
             save_as_pickle(root, [TtrackStayInLeft[animal, session], TtrackStayInRight[animal, session]], animal, session, "trackTimeinZone.p")
             save_as_pickle(root, d, animal, session, "sequence.p")
 
-            #lick_arrivalRightBin[animal, session], lick_drinkingRightBin[animal, session], lick_waitRightBin[animal, session], lick_arrivalLeftBin[animal, session], lick_drinkingLeftBin[animal, session], lick_waitLeftBin[animal, session]
             if printFigs == False:
                 plt.close('all')
 
@@ -991,365 +1052,7 @@ def processData(arr, root, ID, sessionIN, index, buggedSessions, redoCompute=Fal
             speedRunToRightBin, speedRunToLeftBin, XtrackRunToRightBin, XtrackRunToLeftBin, timeRunToRightBin, timeRunToLeftBin, timeStayInRightBin, timeStayInLeftBin, XtrackStayInRightBin, XtrackStayInLeftBin, TtrackStayInRightBin, TtrackStayInLeftBin, instantSpeedRightBin, instantSpeedLeftBin, maxSpeedRightBin, maxSpeedLeftBin, whenmaxSpeedRightBin, whenmaxSpeedLeftBin, wheremaxSpeedRightBin, wheremaxSpeedLeftBin, lick_arrivalRightBin, lick_drinkingRightBin, lick_waitRightBin, lick_arrivalLeftBin, lick_drinkingLeftBin, lick_waitLeftBin = ({} for i in range(26))
             nb_runs_to_rightBin, nb_runs_to_leftBin, nb_runsBin, total_trials = {}, {}, {}, {}
 
-        arr[index] += (1/len(sessionList))
         clear_output(wait=True)
-
-
-def checkHealth(arr, root, ID, sessionIN, index, buggedSessions, redoFig=False, printFigs=False, redoMask=False):
-    index = index
-    animal = ID 
-
-### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-### INIT
-### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    # initialise all Var dicts
-    params, rat_markers, water = {}, {}, {}
-    extractTime, extractPositionX, extractPositionY, extractLickLeft, extractLickRight, framebuffer, solenoid_ON_Left, solenoid_ON_Right, cameraEdit = ({} for i in range(9)) 
-    rawTime, rawPositionX, rawPositionY, rawLickLeftX, rawLickRightX, rawLickLeftY, rawLickRightY, smoothMask, rawSpeed = ({} for i in range(9)) 
-    binPositionX, binPositionY, binTime, binLickLeftX, binLickRightX, binSolenoid_ON_Left, binSolenoid_ON_Right = ({} for i in range(7))
-    leftBoundaryPeak, rightBoundaryPeak, kde = {}, {}, {}
-    smoothMask, rawMask, binSpeed, binMask = {}, {}, {}, {}
-    running_Xs, idle_Xs, goodSpeed, badSpeed = {}, {}, {}, {}
-    speedToRightCharacteristics, speedToLeftCharacteristics, speedToRightCharacteristicsBin, speedToLeftCharacteristicsBin = {}, {}, {}, {}
-    limspeedRunToRight, limspeedRunToLeft, limstayRight, limstayLeft, all_speedRunToRight, all_speedRunToLeft, all_timeRunToRight, all_timeRunToLeft, all_timeStayInRight, all_timeStayInLeft, all_TtrackStayInRight, all_TtrackStayInLeft, all_instantSpeedRight, all_instantSpeedLeft, all_maxSpeedRight, all_maxSpeedLeft, good_speedRunToRight, good_speedRunToLeft, good_XtrackRunToRight, good_XtrackRunToLeft, good_timeRunToRight, good_timeRunToLeft, bad_speedRunToRight, bad_speedRunToLeft, bad_XtrackRunToRight,bad_XtrackRunToLeft, bad_timeRunToRight, bad_timeRunToLeft, good_instantSpeedRight, good_instantSpeedLeft, good_maxSpeedRight, good_maxSpeedLeft, bad_instantSpeedRight, bad_instantSpeedLeft, bad_maxSpeedRight, bad_maxSpeedLeft, good_timeStayInRight, good_timeStayInLeft, good_XtrackStayInRight, good_XtrackStayInLeft, good_TtrackStayInRight, good_TtrackStayInLeft, bad_timeStayInRight, bad_timeStayInLeft, bad_XtrackStayInRight, bad_XtrackStayInLeft, bad_TtrackStayInRight, bad_TtrackStayInLeft, lick_arrivalRight, lick_drinkingRight, lick_waitRight, lick_arrivalLeft, lick_drinkingLeft, lick_waitLeft = ({} for i in range(54))
-    limspeedRunToRightBin, limspeedRunToLeftBin, limstayRightBin, limstayLeftBin, all_speedRunToRightBin, all_speedRunToLeftBin, all_timeRunToRightBin, all_timeRunToLeftBin, all_timeStayInRightBin, all_timeStayInLeftBin, all_TtrackStayInRightBin, all_TtrackStayInLeftBin, all_instantSpeedRightBin, all_instantSpeedLeftBin, all_maxSpeedRightBin, all_maxSpeedLeftBin, good_speedRunToRightBin, good_speedRunToLeftBin, good_XtrackRunToRightBin, good_XtrackRunToLeftBin, good_timeRunToRightBin, good_timeRunToLeftBin, bad_speedRunToRightBin, bad_speedRunToLeftBin, bad_XtrackRunToRightBin, bad_XtrackRunToLeftBin, bad_timeRunToRightBin, bad_timeRunToLeftBin, good_instantSpeedRightBin, good_instantSpeedLeftBin, good_maxSpeedRightBin, good_maxSpeedLeftBin, bad_instantSpeedRightBin, bad_instantSpeedLeftBin, bad_maxSpeedRightBin, bad_maxSpeedLeftBin, good_timeStayInRightBin, good_timeStayInLeftBin, good_XtrackStayInRightBin, good_XtrackStayInLeftBin, good_TtrackStayInRightBin, good_TtrackStayInLeftBin, bad_timeStayInRightBin, bad_timeStayInLeftBin, bad_XtrackStayInRightBin, bad_XtrackStayInLeftBin, bad_TtrackStayInRightBin, bad_TtrackStayInLeftBin, lick_arrivalRightBin, lick_drinkingRightBin, lick_waitRightBin, lick_arrivalLeftBin, lick_drinkingLeftBin, lick_waitLeftBin = ({} for i in range(54))
-    nb_runs_to_rightBin, nb_runs_to_leftBin, nb_runsBin, total_trials = {}, {}, {}, {}
-    nb_rewardBlockLeft, nb_rewardBlockRight,nbWaterLeft, nbWaterRight, totalWater, totalDistance =({} for i in range(6))
-    rawLickLeftplot, rawLickRightplot = {}, {}
-    lickBug, notfixed, F00lostTRACKlick, buggedRatSessions, boundariesBug, runstaysepbug = buggedSessions 
-
-
-    palette = [(0.4, 0.0, 0.0), (0.55, 0.0, 0.0),  (0.8, 0.36, 0.36),   (1.0, 0.27, 0.0),   (0.0, 0.39, 0.0),    (0.13, 0.55, 0.13),   (0.2, 0.8, 0.2), (0.6, 1.0, 0.6)]### we use RGB [0-1] not [0-255]. See www.colorhexa.com for conversion #old#palette = ['darkred', 'indianred', 'orangered', 'darkgreen', 'forestgreen', 'limegreen']
-    if fnmatch.fnmatch(animal, 'RatF*'): rat_markers[animal]=[palette[index], "$\u2640$"]
-    elif fnmatch.fnmatch(animal, 'RatM*'): rat_markers[animal]=[palette[index], "$\u2642$"]
-    elif fnmatch.fnmatch(animal, 'Rat00*'): rat_markers[animal]=[palette[index], "$\u2426$"]
-    else: print("error, this is not a rat you got here")
-
-    if sessionIN != []: sessionList = sessionIN
-    else: sessionList = [] #sorted([os.path.basename(expPath) for expPath in glob.glob(root+os.sep+animal+os.sep+"Experiments"+os.sep+"Rat*")])
-    arr[index] = 0
-    for sessionindex, session in enumerate(sessionList):
-        # print(session)
-        figPath = root+os.sep+animal+os.sep+"Experiments"+os.sep+session+os.sep+"Figures" +os.sep+"healthFIG%s.png"%session
-        if os.path.exists(figPath) and (not redoFig):
-            if printFigs == True: display(Image(filename=figPath))
-        else:
-
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ### LOAD AND PREPROCESS DATA
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-            #extract/compute parameters from behav_params and create a parameter dictionnary for each rat and each session
-            #change of behav_param format 07/2020 -> labview ok 27/07/2020 before nOk #format behavparam ? #catchup manual up to 27/07
-
-            params[animal, session] = {"sessionDuration": read_params(root, animal, session, "sessionDuration"),
-                                       "acqPer": read_params(root, animal, session, "acqPer"),
-                                       "waterLeft": round((read_params(root, animal, session, "waterLeft", valueType=float) - read_params(root, animal, session, "cupWeight", valueType=float))/10*1000, 2),
-                                       "waterRight": round((read_params(root, animal, session, "waterRight", valueType=float) - read_params(root, animal, session, "cupWeight", valueType=float))/10*1000, 2),
-                                       "treadmillDist": read_params(root, animal, session, "treadmillSize"),
-                                       "weight": read_params(root, animal, session, "ratWeight"),
-                                       "lastWeightadlib": read_params(root, animal, session, "ratWeightadlib"),
-                                       "lastDayadlib": read_params(root, animal, session, "lastDayadlib"),
-                                       "lickthresholdLeft": read_params(root, animal, session, "lickthresholdLeft"),  # added in Labview 2021/07/06. Now uses the custom lickthreshold for each side. Useful when lickdata baseline drifts and value is directly changed in LV. Only one session might be bugged, so this parameter is session specific. Before, the default value (300) was used and modified manually during the analysis.
-                                       "lickthresholdRight": read_params(root, animal, session, "lickthresholdRight"),
-                                       "realEnd": str(read_params(root, animal, session, "ClockStop")),
-                                       "brainstatus": read_params(root, animal, session, "brainstatus", valueType="other")}
-
-
-            #initialize boundaries to be computed later using the KDE function
-            params[animal, session]["boundaries"] = []
-
-            #compute number of days elapsed between experiment day and removal of the water bottle
-            lastDayadlib   = str(datetime.datetime.strptime(str(read_params(root, animal, session, "lastDayadlib")), "%Y%m%d").date())
-            stringmatch    = re.search(r'\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}', session)
-            experimentDay  = str(datetime.datetime.strptime(stringmatch.group(), '%Y_%m_%d_%H_%M_%S'))
-            daysSinceadlib = datetime.date(int(experimentDay[0:4]), int(experimentDay[5:7]), int(experimentDay[8:10])) - datetime.date(int(lastDayadlib[0:4]), int(lastDayadlib[5:7]), int(lastDayadlib[8:10]))
-            params[animal, session]["daysSinceadLib"] = daysSinceadlib.days
-
-            #compute IRL elapsed session time
-            if params[animal, session]['realEnd'] != 'None':
-                startExpe = datetime.time(int(experimentDay[11:13]), int(experimentDay[14:16]), int(experimentDay[17:19]))
-                endExpe   = datetime.time(hour = int(params[animal, session]['realEnd'][0:2]), minute = int(params[animal, session]['realEnd'][2:4]), second = int(params[animal, session]['realEnd'][4:6]))
-                params[animal, session]["realSessionDuration"] = datetime.datetime.combine(datetime.date(1, 1, 1), endExpe) - datetime.datetime.combine(datetime.date(1, 1, 1), startExpe)
-            else: params[animal, session]["realSessionDuration"] = None
-
-            #determine block duration set based on the block timing defined in labview. 1 block in labview is comprised of a ON period and a OFF period. Max 12 blocks in LabView (12 On + 12 Off)*repeat.
-            blocklist = []# raw blocks from LabView -> 1 block (ON+OFF) + etc
-            for blockN in range(1,13): #13? or more ? Max 12 blocks, coded in LabView...
-                #add block if  block >0 seconds then get data from file. 
-                #Data from behav_params as follows: Block N°: // ON block Duration // OFF block duration // Repeat block // % reward ON // % reward OFF // Treadmill speed.
-                if read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -6, valueType = str) != 0:
-                    blocklist.append([read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -6, valueType = str), read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -5, valueType = str), 
-                                    read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -4, valueType = str), read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -3, valueType = str), 
-                                    read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -2, valueType = str), read_params(root, animal, session, "Block "+ str(blockN), dataindex =  -1, valueType = str), blockN])
-            
-            #create an array [start_block, end_block] for each block using the values we have just read -> 1 block ON + 1 bloc OFF + etc.
-            timecount, blockON_start, blockON_end, blockOFF_start, blockOFF_end = 0, 0, 0, 0, 0
-            blocks = [] #blocks that we are going to use in the data processing. 1 block ON + 1 bloc OFF + etc.
-            rewardP_ON = [] #probability of getting the reward in each ON phase 
-            rewardP_OFF = [] #same for OFF
-            treadmillSpeed = [] #treadmill speed for each block (ON + OFF blocks not differenciated for now)
-            rewardProbaBlock = []
-            for block in blocklist:
-                for repeat in range(0, block[2]): #in essence blocks = [a, b], [b, c], [c, d], ...
-                    blockON_start = timecount
-                    timecount += block[0]
-                    blockON_end = timecount
-                    blockOFF_start = timecount
-                    timecount += block[1]
-                    blockOFF_end = timecount
-                    blocks.append([blockON_start, blockON_end])
-                    if blockOFF_start - blockOFF_end != 0:
-                        blocks.append([blockOFF_start, blockOFF_end])
-                    rewardP_ON.append(block[3])
-                    rewardP_OFF.append(block[4])
-                    rewardProbaBlock.extend(block[3:5])
-                    treadmillSpeed.append(block[5])
-                    treadmillSpeed.append(block[5])
-            params[animal, session]["blocks"], params[animal, session]["rewardP_ON"], params[animal, session]["rewardP_OFF"], params[animal, session]["treadmillSpeed"], params[animal, session]['rewardProbaBlock'] = blocks, rewardP_ON, rewardP_OFF, treadmillSpeed, rewardProbaBlock
-            #print(blocks)
-            #Extract data for each .position file generated from LabView
-            #Data loaded : time array, position of the animal X and Y axis, Licks to the left and to the right, and frame number
-            extractTime[animal, session]      = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[3])#old format = 5
-            extractPositionX[animal, session] = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[4])#old format = 6
-            extractPositionY[animal, session] = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[5])
-            extractLickLeft[animal, session]  = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[6])
-            extractLickRight[animal, session] = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[7])
-            solenoid_ON_Left[animal, session] = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[8])
-            solenoid_ON_Right[animal, session]= read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[9])
-            framebuffer[animal, session]      = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[10])
-            cameraEdit[animal, session]       = read_csv_pandas((root+os.sep+animal+os.sep+"Experiments"+os.sep + session + os.sep+session+".position"),Col=[11])
-
-            #Cut leftover data at the end of the session (e.g. session is 1800s long, data goes up to 1820s because session has not been stopped properly/stopped manually, so we remove the extra 20s)
-            rawTime[animal, session]          = extractTime[animal, session][extractTime[animal, session]      <= params[animal, session]["sessionDuration"]]
-            rawPositionX[animal, session]     = extractPositionX[animal, session][extractTime[animal, session] <= params[animal, session]["sessionDuration"]]
-            rawPositionY[animal, session]     = extractPositionY[animal, session][extractTime[animal, session] <= params[animal, session]["sessionDuration"]]
-            rawLickLeftX[animal, session]     = extractLickLeft[animal, session][extractTime[animal, session]  <= params[animal, session]["sessionDuration"]]
-            rawLickLeftY[animal, session]     = extractLickLeft[animal, session][extractTime[animal, session]  <= params[animal, session]["sessionDuration"]]# not needed, check
-            rawLickLeftplot[animal, session]     = extractLickLeft[animal, session][extractTime[animal, session]  <= params[animal, session]["sessionDuration"]]
-            rawLickRightplot[animal, session]     = extractLickRight[animal, session][extractTime[animal, session]  <= params[animal, session]["sessionDuration"]]# not needed, check
-            rawLickRightX[animal, session]    = extractLickRight[animal, session][extractTime[animal, session] <= params[animal, session]["sessionDuration"]]
-            rawLickRightY[animal, session]    = extractLickRight[animal, session][extractTime[animal, session] <= params[animal, session]["sessionDuration"]]# not needed, check
-            solenoid_ON_Left[animal, session] = solenoid_ON_Left[animal, session][extractTime[animal, session] <= params[animal, session]["sessionDuration"]]
-            solenoid_ON_Right[animal, session]= solenoid_ON_Right[animal, session][extractTime[animal, session]<= params[animal, session]["sessionDuration"]]# not needed, check
-            
-            #convert data from px to cm
-            rawPositionX[animal, session], rawPositionY[animal, session] = datapx2cm(rawPositionX[animal, session]), datapx2cm(rawPositionY[animal, session])
-            rawSpeed[animal, session]  = compute_speed(rawPositionX[animal, session], rawTime[animal, session])
-            smoothMask[animal,session] = np.array([True])
-
-            # usually rat is not found in the first few frames, so we replace Xposition by the first nonzero value
-            # this is detected as a camera edit, so we fix that as well
-            rawPositionX[animal, session], cameraEdit[animal, session] = fix_start_session(rawPositionX[animal, session], cameraEdit[animal, session])
-            rawPositionX[animal, session] = fixcamglitch(rawTime[animal, session], rawPositionX[animal, session], cameraEdit[animal, session])
-
-            #smoothing
-            smoothPos, smoothSpeed = True, True
-            sigmaPos, sigmaSpeed = 2, 2 #seems to work, less: not smoothed enough, more: too smoothed, not sure how to objectively compute an optimal value.
-            if smoothPos == True:
-                if smoothSpeed == True:
-                    rawPositionX[animal, session]  = smooth(rawPositionX[animal, session], sigmaPos)
-                    rawSpeed[animal, session]      = smooth(compute_speed(rawPositionX[animal, session], rawTime[animal, session]), sigmaSpeed)
-                else: rawPositionX[animal, session]= smooth(rawPositionX[animal, session], sigmaPos)
-
-            # Load lick data -- Licks == measure of conductance at the reward port. Conductance is ____ and when lick, increase of conductance so ___|_|___, we define it as a lick if it is above a threshold. But baseline value can randomly increase like this ___----, so baseline can be above threshold, so false detections. -> compute moving median to get the moving baseline (median, this way we eliminate the peaks in the calculation of the baseline) and then compare with threshold. __|_|__---|---|----
-            window = 200
-            if params[animal, session]["lickthresholdLeft"] == None: params[animal, session]["lickthresholdLeft"] = 300
-            if params[animal, session]["lickthresholdRight"]== None: params[animal, session]["lickthresholdRight"] = 300
-            rawLickLeftX[animal, session]  = [k if i-j >= params[animal, session]["lickthresholdLeft"]  else 0 for i, j, k in zip(rawLickLeftX[animal, session],  reversemovinmedian(rawLickLeftX[animal, session],  window), rawPositionX[animal, session])]
-            rawLickRightX[animal, session] = [k if i-j >= params[animal, session]["lickthresholdRight"] else 0 for i, j, k in zip(rawLickRightX[animal, session], reversemovinmedian(rawLickRightX[animal, session], window), rawPositionX[animal, session])]
-            
-            # Specify if a session has lick data problems, so we don't discard the whole session (keep the run behavior, remove lick data)     
-            if   all(v == 0 for v in rawLickLeftX[animal, session]):  params[animal, session]["hasLick"] = False
-            elif all(v == 0 for v in rawLickRightX[animal, session]): params[animal, session]["hasLick"] = False       
-            elif animal + " " + session in lickBug: params[animal, session]["hasLick"] = False
-            else: params[animal, session]["hasLick"] = True
-
-            # Water data. Drop size and volume rewarded. Compute drop size for each reward port. Determine if drops are equal, or which one is bigger. Assign properties (e.g. line width for plots) accordingly.
-            limitWater_diff = 5
-            watL = round(params[animal, session]["waterLeft"], 1) #print(round(params[animal, session]["waterLeft"], 1), "µL/drop")
-            watR = round(params[animal, session]["waterRight"], 1) #print(round(params[animal, session]["waterRight"], 1), "µL/drop")
-            if watL-(watL*limitWater_diff/100) <= watR <= watL+(watL*limitWater_diff/100): water[animal, session] = ["Same Reward Size", "Same Reward Size", 2, 2] #print(session, "::", watL, watR, "     same L-R") #print(watL-(watL*limitWater_diff/100)) #print(watL+(watL*limitWater_diff/100))
-            elif watL < watR: water[animal, session] = ["Small Reward", "Big Reward", 1, 5]#print(session, "::", watL, watR, "     bigR")
-            elif watL > watR: water[animal, session] = ["Big Reward", "Small Reward", 5, 1] #print(session, "::", watL, watR, "     bigL")
-            else: print(session, "error, bypass? Y/N")
-
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ### DATA PROCESSING
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------      
-    
-            # Compute boundaries
-            border = 5 #define arbitrary border
-            leftBoundaryPeak[animal, session], rightBoundaryPeak[animal, session], kde[animal, session] = extract_boundaries(rawPositionX[animal, session], animal, session, params[animal, session]['treadmillDist'], height = 0.001)
-            # print(session, "::", leftBoundaryPeak[animal, session], rightBoundaryPeak[animal, session])
-            # for s in boundariesBug: 
-                # if animal + " " + session == s[0]: 
-                #     print("inbug")
-                #     params[animal, session]["boundaries"] = s[1]
-                #     break
-                # else: 
-            params[animal, session]["boundaries"] = [rightBoundaryPeak[animal, session] - border, leftBoundaryPeak[animal, session] + border]
-
-
-            # Compute or pickle run/stay mask
-            maskpicklePath = root+os.sep+animal+os.sep+"Experiments"+os.sep+session+os.sep+"Analysis"+os.sep+"mask.p"
-            if os.path.exists(maskpicklePath) and (not redoMask): 
-                binMask[animal, session] = get_from_pickle(root, animal, session, name="mask.p")
-            else: 
-                if animal + " " + session in runstaysepbug: 
-                    septhreshold = 0.0004
-                else: 
-                    septhreshold = 0.0002
-                # print(session, "septhreshold", septhreshold)
-                rawMask[animal,session]     = filterspeed(animal, session, rawPositionX[animal, session], rawSpeed[animal, session], rawTime[animal, session], septhreshold, params[animal, session]["treadmillDist"])#threshold 0.0004 seems to work ok for all TM distances. lower the thresh the bigger the wait blob zone taken, which caused problems in 60cm configuration.
-                smoothMask[animal, session] = removeSplits_Mask(rawMask, rawPositionX, animal, session, params[animal, session]["treadmillDist"])
-                binMask[animal,session]     = fixSplittedRunsMask(animal, session, bin_session(animal, session, smoothMask, rawTime, blocks), blocks)
-            smoothMask[animal, session] = stitch([binMask[animal, session]])[0]
-            running_Xs[animal,session]     = [val[0] if val[1] == True  else None for val in [[i, j] for i, j in zip(rawPositionX[animal,session], smoothMask[animal,session])]]
-            idle_Xs[animal,session]      = [val[0] if val[1] == False else None for val in [[i, j] for i, j in zip(rawPositionX[animal,session], smoothMask[animal,session])]]
-            goodSpeed[animal,session]   = [val[0] if val[1] == True  else None for val in [[i, j] for i, j in zip(rawSpeed[animal,session], smoothMask[animal,session])]]
-            badSpeed[animal,session]    = [val[0] if val[1] == False else None for val in [[i, j] for i, j in zip(rawSpeed[animal,session], smoothMask[animal,session])]]
-
-            total_trials[animal, session] = len(split_a_list_at_zeros(stitch([binMask[animal, session]])[0])) #approximated, because we don't separate and filter runs in there, so nb of runs is deduced from the mask
-            totalDistance[animal, session] = sum(abs(np.diff(rawPositionX[animal, session])))/100
-            binSolenoid_ON_Left[animal, session]  = reCutBins(solenoid_ON_Left[animal, session], binMask[animal, session])
-            binSolenoid_ON_Right[animal, session] = reCutBins(solenoid_ON_Right[animal, session], binMask[animal, session]) 
-            
-            nb_rewardBlockLeft[animal, session], nb_rewardBlockRight[animal, session],nbWaterLeft[animal, session], nbWaterRight[animal, session] = {}, {}, 0, 0
-            for i in range(0, len(params[animal, session]['blocks'])):
-                nb_rewardBlockLeft[animal, session][i] = sum([1 if t[0] <= params[animal, session]['rewardProbaBlock'][i] else 0 for t in split_a_list_at_zeros(binSolenoid_ON_Left[animal, session][i])]) #split a list because in data file we have %open written along valve opening time duration (same value multiple time), so we only take the first one, verify >threshold, ...
-                nb_rewardBlockRight[animal, session][i] = sum([1 if t[0] <= params[animal, session]['rewardProbaBlock'][i] else 0 for t in split_a_list_at_zeros(binSolenoid_ON_Right[animal, session][i])]) #print(i+1, nb_rewardBlockLeft[animal, session][i], nb_rewardBlockRight[animal, session][i])
-            nbWaterLeft[animal, session] = sum(nb_rewardBlockLeft[animal, session].values())
-            nbWaterRight[animal, session] = sum(nb_rewardBlockRight[animal, session].values())
-            totalWater[animal, session] = round((nbWaterLeft[animal, session] * params[animal, session]["waterLeft"] + nbWaterRight[animal, session] * params[animal, session]["waterRight"])/1000, 2), 'mL'             #totalWater[animal, session] = nbWaterLeft[animal, session] * params[animal, session]["waterLeft"], "+", nbWaterRight[animal, session] * params[animal, session]["waterRight"]
-
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ### FIGURES
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
-            
-            # Plot figure
-            fig = plt.figure(constrained_layout=False, figsize=(20, 16))
-            fig.suptitle(session, y=0.9, fontsize=24)
-            gs = fig.add_gridspec(45, 75)
-            ax00 = fig.add_subplot(gs[0:7, 0:4])
-            ax00 = plot_peak(rawPositionX[animal, session], animal, session, leftBoundaryPeak[animal, session], rightBoundaryPeak[animal, session], kde[animal, session],[0.05, 0, 0],[0, 120 ,0],  marker=[""], xyLabels=["Position (cm)", "%"])
-            ax01 = fig.add_subplot(gs[0:7, 5:75])
-            ax01 = plot_BASEtrajectoryV2(animal, session, rawTime[animal, session], running_Xs[animal, session], idle_Xs[animal, session], rawLickLeftX[animal, session], rawLickRightX[animal, session], params[animal, session]['rewardProbaBlock'], params[animal, session]['blocks'], barplotaxes=[0, params[animal, session]['sessionDuration'], 50, 90, 0, 22, 10],  xyLabels=["Time (min)", "", "Position (cm)", "", "", "", 14, 12], title=[session, "", "", "", 16], linewidth=[1.5])
-            plt.plot([0, params[animal, session]['sessionDuration']], [params[animal, session]["boundaries"][0], params[animal, session]["boundaries"][0]], ":", color='k', alpha=0.5)
-            plt.plot([0, params[animal, session]['sessionDuration']], [params[animal, session]["boundaries"][1], params[animal, session]["boundaries"][1]], ":", color='k', alpha=0.5)
-
-            gs00 = gs[8:13, 0:75].subgridspec(2,75)
-            ax11 = fig.add_subplot(gs00[0, 5:75])
-            ax12 = fig.add_subplot(gs00[1, 0:75])
-            ax11.plot(rawTime[animal,session], goodSpeed[animal,session], color='dodgerblue')
-            ax11.plot(rawTime[animal,session], badSpeed[animal, session], color='orange')
-            ax11.set_xlabel('time (s)')
-            ax11.set_ylabel('speed (cm/s)')
-            ax11.set_xlim(0, 3600)
-            ax11.set_ylim(-200,200)
-            ax11.spines['top'].set_color("none")
-            ax11.spines['right'].set_color("none")
-            ax11.spines['left'].set_color("none")
-            ax11.spines['bottom'].set_color("none")
-            ax12.scatter(rawPositionX[animal,session], goodSpeed[animal,session], color='dodgerblue', s=0.5)
-            ax12.scatter(rawPositionX[animal,session], badSpeed[animal,session], color='orange', s=0.5)
-            ax12.set_xlabel('position (cm)')
-            ax12.set_ylabel('speed (cm/s)')
-            ax12.set_xlim(0,130)
-            ax12.set_ylim(-150,150)
-            ax12.spines['top'].set_color("none")
-            ax12.spines['right'].set_color("none")
-            ax12.spines['left'].set_color("none")
-            ax12.spines['bottom'].set_color("none")
-            yline = [0, 120]
-            xline = [0,0]
-            ax12.plot(yline, xline, ":", color='k')
-            
-            gs23 = gs[15:20, 0:75].subgridspec(5,5)
-            ax231 = fig.add_subplot(gs23[0:5, 0:2])
-            if len(framebuffer[animal, session]) != 0:
-                ax231.set_title("NbBug/TotFrames: %s/%s = %.2f" %(sum(np.diff(framebuffer[animal, session])-1), len(framebuffer[animal, session]), sum(np.diff(framebuffer[animal, session])-1)/len(framebuffer[animal, session])), fontsize=16)
-            ax231.scatter(list(range(1, len(framebuffer[animal, session]))), [ x-1 for x in np.diff(framebuffer[animal, session])], s=5)
-            ax231.set_xlabel("frame index")
-            ax231.set_ylabel("dFrame -1 (0 is ok)")
-            ax232 = fig.add_subplot(gs23[0:5, 3:5])
-            ax232.set_title(params[animal, session]["realSessionDuration"], fontsize=16)
-            ax232.plot(np.diff(rawTime[animal, session]), label="data")
-            ax232.plot(movinavg(np.diff(rawTime[animal, session]), 100), label="moving average")
-            ax232.set_xlim(0, len(np.diff(rawTime[animal, session])))
-            ax232.set_ylim(0, 0.1)
-            ax232.set_xlabel("frame index")
-            ax232.set_ylabel("time per frame (s)")
-
-            aaa = range(0, len(rawLickLeftplot[animal, session]))
-            ax30 = fig.add_subplot(gs[22:27, 0:75])
-            ax30.plot(rawLickLeftplot[animal, session], lw=0.5, c='k')
-            ax30.plot(movinmedian(rawLickLeftplot[animal, session], window)+params[animal, session]["lickthresholdLeft"], lw=0.5, c='r')
-            ax30.plot([i + params[animal, session]["lickthresholdLeft"] for i in reversemovinmedian(rawLickLeftplot[animal, session], window)], lw=1, c='g')
-            ax30.scatter(aaa, [i if i-j >= params[animal, session]["lickthresholdLeft"]  else None for i, j in zip(rawLickLeftplot[animal, session],  reversemovinmedian(rawLickLeftplot[animal, session],  window))], s =10)
-            ax30.set_xlabel("time")
-            ax30.set_ylabel("conductance")
-            ax30.set_title("LEFTLICKS, Lthrsh{0}".format(params[animal, session]["lickthresholdLeft"]), fontsize=16)
-            ax30.set_xlim(0, params[animal, session]['sessionDuration']*25)
-            ax30.set_ylim(0, 2000)
-
-            ax31 = fig.add_subplot(gs[28:33, 0:75])
-            ax31.plot(rawLickRightplot[animal, session], lw=0.5, c='k')
-            ax31.plot(movinmedian(rawLickRightplot[animal, session], window)+params[animal, session]["lickthresholdRight"], lw=0.5, c='r')
-            ax31.plot([i + params[animal, session]["lickthresholdRight"] for i in reversemovinmedian(rawLickRightplot[animal, session], window)], lw=1, c='g')
-            ax31.scatter(aaa, [i if i-j >= params[animal, session]["lickthresholdRight"] else None for i, j in zip(rawLickRightplot[animal, session], reversemovinmedian(rawLickRightplot[animal, session], window))], s=10)
-            ax31.set_xlabel("time")
-            ax31.set_ylabel("conductance")
-            ax31.set_title("RIGHTLICKS, Rthrsh{0}".format(params[animal, session]["lickthresholdRight"]), fontsize=16)
-            ax31.set_xlim(0, params[animal, session]['sessionDuration']*25)
-            ax31.set_ylim(0, 2000)
-
-            ax32 = fig.add_subplot(gs[34:39, 0:75])
-            ax32 = plot_BASEtrajectory(rawTime[animal, session],rawPositionX[animal, session], rawLickLeftX[animal, session], rawLickRightX[animal, session], [0, params[animal, session]['sessionDuration'], 1],[0,120,1],  color=["b", "c"], marker=["", "o", 1], linewidth=[0.5], xyLabels=["Position (px)", "Time(s)"])
-
-
-            # %config InlineBackend.print_figure_kwargs={'bbox_inches':None}
-            ax80 = fig.add_subplot(gs[43:45, 0:60])
-            ax80.spines['top'].set_color("none")
-            ax80.spines['right'].set_color("none")
-            ax80.spines['left'].set_color("none")
-            ax80.spines['bottom'].set_color("none")
-            ax80.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False) 
-            ax80.tick_params(axis='y', which='both', left=False, right=False, labelleft=False) 
-            text = ("sessionDuration: {0} | acqPer: {1} | waterLeft: {2} | waterRight: {3} | treadmillDist: {4} | weight: {5} | lastWeightadlib: {6} | lastDayadlib: {7} | lickthresholdLeft: {8} | lickthresholdRight: {9} | realEnd: {10} | boundaries: {11} | daysSinceadLib: {12} \n realSessionDuration: {13} | blocks: {14} | \n rewardP_ON: {15} | rewardP_OFF: {16} | treadmillSpeed: {17} | rewardProbaBlock: {18} | hasLick: {19}").format(params[animal,session]['sessionDuration'], params[animal,session]['acqPer'], params[animal,session]['waterLeft'], params[animal,session]['waterRight'], params[animal,session]['treadmillDist'], params[animal,session]['weight'], params[animal,session]['lastWeightadlib'], params[animal,session]['lastDayadlib'], params[animal,session]['lickthresholdLeft'], params[animal,session]['lickthresholdRight'], params[animal,session]['realEnd'], params[animal,session]['boundaries'], params[animal,session]['daysSinceadLib'],params[animal,session]['realSessionDuration'], params[animal,session]['blocks'], params[animal,session]['rewardP_ON'], params[animal,session]['rewardP_OFF'], params[animal,session]['treadmillSpeed'], params[animal,session]['rewardProbaBlock'], params[animal,session]['hasLick'])
-            ax80 = plt.text(0,0, str(text), wrap=True)
-
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ### SAVE + PICKLE
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            save_sessionplot_as_png(root, animal, session, 'healthFIG%s.png'%session, dpi='figure', transparent=False, background='w')
-            save_as_pickle(root, [totalDistance[animal, session], totalWater[animal, session], total_trials[animal, session]], animal, session, "misc.p")
-            save_as_pickle(root, params[animal, session],     animal, session, "params.p")
-            save_as_pickle(root, binMask[animal, session], animal, session, "mask.p")
-
-
-            if printFigs == False:
-                plt.close('all')
-
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ### FLUSH
-        ### -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            
-            # Delete all data for this session
-            params, rat_markers, water = {}, {}, {}
-            extractTime, extractPositionX, extractPositionY, extractLickLeft, extractLickRight, framebuffer, solenoid_ON_Left, solenoid_ON_Right, cameraEdit = ({} for i in range(9)) 
-            rawTime, rawPositionX, rawPositionY, rawLickLeftX, rawLickRightX, rawLickLeftY, rawLickRightY, smoothMask, rawSpeed = ({} for i in range(9)) 
-            binPositionX, binPositionY, binTime, binLickLeftX, binLickRightX, binSolenoid_ON_Left, binSolenoid_ON_Right = ({} for i in range(7))
-            leftBoundaryPeak, rightBoundaryPeak, kde = {}, {}, {}
-            smoothMask, rawMask, binSpeed, binMask = {}, {}, {}, {}
-            running_Xs, idle_Xs, goodSpeed, badSpeed = {}, {}, {}, {}
-            speedToRightCharacteristics, speedToLeftCharacteristics, speedToRightCharacteristicsBin, speedToLeftCharacteristicsBin = {}, {}, {}, {}
-            limspeedRunToRight, limspeedRunToLeft, limstayRight, limstayLeft, all_speedRunToRight, all_speedRunToLeft, all_timeRunToRight, all_timeRunToLeft, all_timeStayInRight, all_timeStayInLeft, all_TtrackStayInRight, all_TtrackStayInLeft, all_instantSpeedRight, all_instantSpeedLeft, all_maxSpeedRight, all_maxSpeedLeft, good_speedRunToRight, good_speedRunToLeft, good_XtrackRunToRight, good_XtrackRunToLeft, good_timeRunToRight, good_timeRunToLeft, bad_speedRunToRight, bad_speedRunToLeft, bad_XtrackRunToRight,bad_XtrackRunToLeft, bad_timeRunToRight, bad_timeRunToLeft, good_instantSpeedRight, good_instantSpeedLeft, good_maxSpeedRight, good_maxSpeedLeft, bad_instantSpeedRight, bad_instantSpeedLeft, bad_maxSpeedRight, bad_maxSpeedLeft, good_timeStayInRight, good_timeStayInLeft, good_XtrackStayInRight, good_XtrackStayInLeft, good_TtrackStayInRight, good_TtrackStayInLeft, bad_timeStayInRight, bad_timeStayInLeft, bad_XtrackStayInRight, bad_XtrackStayInLeft, bad_TtrackStayInRight, bad_TtrackStayInLeft, lick_arrivalRight, lick_drinkingRight, lick_waitRight, lick_arrivalLeft, lick_drinkingLeft, lick_waitLeft = ({} for i in range(54))
-            limspeedRunToRightBin, limspeedRunToLeftBin, limstayRightBin, limstayLeftBin, all_speedRunToRightBin, all_speedRunToLeftBin, all_timeRunToRightBin, all_timeRunToLeftBin, all_timeStayInRightBin, all_timeStayInLeftBin, all_TtrackStayInRightBin, all_TtrackStayInLeftBin, all_instantSpeedRightBin, all_instantSpeedLeftBin, all_maxSpeedRightBin, all_maxSpeedLeftBin, good_speedRunToRightBin, good_speedRunToLeftBin, good_XtrackRunToRightBin, good_XtrackRunToLeftBin, good_timeRunToRightBin, good_timeRunToLeftBin, bad_speedRunToRightBin, bad_speedRunToLeftBin, bad_XtrackRunToRightBin, bad_XtrackRunToLeftBin, bad_timeRunToRightBin, bad_timeRunToLeftBin, good_instantSpeedRightBin, good_instantSpeedLeftBin, good_maxSpeedRightBin, good_maxSpeedLeftBin, bad_instantSpeedRightBin, bad_instantSpeedLeftBin, bad_maxSpeedRightBin, bad_maxSpeedLeftBin, good_timeStayInRightBin, good_timeStayInLeftBin, good_XtrackStayInRightBin, good_XtrackStayInLeftBin, good_TtrackStayInRightBin, good_TtrackStayInLeftBin, bad_timeStayInRightBin, bad_timeStayInLeftBin, bad_XtrackStayInRightBin, bad_XtrackStayInLeftBin, bad_TtrackStayInRightBin, bad_TtrackStayInLeftBin, lick_arrivalRightBin, lick_drinkingRightBin, lick_waitRightBin, lick_arrivalLeftBin, lick_drinkingLeftBin, lick_waitLeftBin = ({} for i in range(54))
-            nb_runs_to_rightBin, nb_runs_to_leftBin, nb_runsBin, total_trials = {}, {}, {}, {}
-            rawLickLeftplot, rawLickRightplot = {}, {}
-
 
 
 ##########################################################################################################################################

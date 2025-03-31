@@ -15,8 +15,6 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from scipy.optimize import curve_fit
 
 from utils import *
-# from model_functions import *
-
 
 def old_letter_on_subplot(ax, letter, x_rel=-0.2, y_rel=1.15, fs=7):
     '''write letter on figure at specified distance from the top left corner of each subplot in axes coordinates
@@ -854,8 +852,8 @@ def plot_tracks(ax, posdataRight, timedataRight, bounds, xylim,
 
 
 # function to plot the cumulative distribution of the run speeds and stay times
-def cumul_plot(ax, dataRight, dataLeft, maxminstepbin,
-               legend, color, xyLabels=["", ""], title=''):
+def cumul_plot(ax, dataRight, dataLeft, barplotaxes, maxminstepbin, scatterplotaxes,
+               legend, color, xyLabels=["", ""], title='', linewidth=0):
     if ax is None:
         ax = plt.gca()
     custom_legend = [Line2D([0], [0], color=color[0]),
@@ -874,15 +872,16 @@ def cumul_plot(ax, dataRight, dataLeft, maxminstepbin,
     ax.set_xlim([maxminstepbin[0], maxminstepbin[1]])
     ax.set_ylim([maxminstepbin[0], maxminstepbin[2]])
 
-    ax.legend(custom_legend, [legend[0], legend[1]],
-              bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
-              mode="expand", borderaxespad=0., frameon=False)
+    if legend != '':
+        ax.legend(custom_legend, [legend[0], legend[1]],
+                bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+                mode="expand", borderaxespad=0., frameon=False)
     return ax
 
 
 # function to plot the scatter data of run times and stay times
-def distribution_plot(ax, dataRight, dataLeft, scatterplotaxes,
-                      legend, color, xyLabels=["", "", "", ""], title=''):
+def distribution_plot(ax, dataRight, dataLeft, barplotaxes, maxminstepbin, scatterplotaxes,
+                      legend, color, xyLabels=["", "", "", ""], title='', linewidth=0):
     if ax is None:
         ax = plt.gca()
     ax.scatter(np.random.normal(1, 0.05, len(dataRight)), dataRight,
@@ -961,12 +960,12 @@ def plot_figBin(ax, data, rewardProbaBlock, blocks, barplotaxes, stat, color='k'
     elif stat == "Med. ":
         ax.plot([(blocks[i][1] + blocks[i][0])/120 for i in range(0, len(blocks))],
                 [np.median(data[i]) for i in range(0, len(blocks))],
-                marker='o', ms=7, color=color)
+                marker='o', ms=7)
         if isinstance(data[0], list):
             ax.errorbar([(blocks[i][1] + blocks[i][0])/120 for i in range(0, len(blocks))],
                         [np.median(data[i]) for i in range(0, len(blocks))],
                         yerr=[stats.sem(data[i]) for i in range(0, len(blocks))],
-                        fmt='o', color=color, ecolor='black', elinewidth=1, capsize=3)
+                        fmt='o', ecolor='black', elinewidth=1, capsize=3)
 
     ax.set_title(title)
     ax.set_xlabel(xyLabels[0])
