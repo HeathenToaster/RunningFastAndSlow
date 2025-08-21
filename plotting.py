@@ -301,7 +301,7 @@ def plot_shuffling(shuffles=np.random.randn(1000), pval=0, observed=None, color=
 
 def regression_permutation(var, dist_or_tm='dist', varname='', lesioned_animals=False, raisy=0,
                            ax_slope=None, yticks_slope=None, 
-                           ax_intercept=None, y_ticks_intercept=None):
+                           ax_intercept=None, y_ticks_intercept=None, num_iterations=10000):
     ''' regression with permutation test for the slope and intercept
     var: parameter to test (e.g., alpha_0)
     dist_or_tm: 'dist' or 'tm'
@@ -352,7 +352,7 @@ def regression_permutation(var, dist_or_tm='dist', varname='', lesioned_animals=
     observed_slope = p[0]
     observed_intercept = p[1]
     slope_sign = np.sign(observed_slope)
-    num_iterations = 10000
+    num_iterations = int(num_iterations)
     shuffled_slopes = []
     shuffled_intercepts = []
 
