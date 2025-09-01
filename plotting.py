@@ -670,7 +670,7 @@ def listed_to_linear(listed_cmap, num_shades=256):
 
 def add_colored_intact(ax=None, handles=[], labels=[], text='Intact rats (n=15)', 
                         type='line', ncol=1, on_fig=False,
-                        loc='upper left', bbox=(0.01, 0.99)):
+                        loc='upper left', bbox=(0.01, 0.99), handler_map=None):
     '''custom legend for intact rats'''
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
@@ -710,11 +710,15 @@ def add_colored_intact(ax=None, handles=[], labels=[], text='Intact rats (n=15)'
                                 handler_map={list: HandlerTuple(ndivide=None, pad=0)},
                                 edgecolor='k', facecolor='w').get_frame().set_linewidth(.5)
     else:
+        if handler_map is None:
+            handler_map = {list: HandlerTuple(ndivide=None, pad=0)}
+        else:
+            handler_map.update({list: HandlerTuple(ndivide=None, pad=0)})
         ax.legend(handles=[*patches_cmaps_gradients, *handles], 
                 labels=[f'{text}', *labels],
                 loc=loc, bbox_to_anchor=bbox, 
                                 frameon=True, fontsize=5, markerscale=1, ncol=ncol,
-                                handler_map={list: HandlerTuple(ndivide=None, pad=0)},
+                                handler_map=handler_map,
                                 edgecolor='k', facecolor='w').get_frame().set_linewidth(.5)
 
 
@@ -1317,3 +1321,64 @@ def across_session_plot(plot, animal_list, session_list, dataLeft, dataRight, ex
                 ax.plot(x, (g/a, h/b, i/c, j/d, k/e, l/f), marker='o', markersize=6, color=marker[animal][0], linestyle=marker[animal][2])
     return ax
 
+def add_panel_label(ax, label, offset_pixels=(0, 0), verbose=False, **text_kwargs):
+    """
+    Add a label (e.g. 'A', 'B', 'C') at a position relative to the ylabel
+    (if present) or the left axis spine (if not) and the top of the y-axis.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The subplot to annotate.
+    label : str
+        The panel label (e.g. 'A').
+    offset_pixels : tuple (dx, dy)
+        Offset in screen pixels (x, y).
+    text_kwargs : dict
+        Passed to fig.text (e.g. fontsize, fontweight).
+    """
+    fig = ax.figure
+    renderer = fig.canvas.get_renderer()
+
+    # x: left of ylabel. if no ylabel, use left spine. if no spine, use bbox
+    ylabel_text = ax.get_ylabel()
+    if ylabel_text.strip():
+        ylab_bbox = ax.yaxis.get_label().get_window_extent(renderer=renderer)
+        x_disp = ylab_bbox.x0
+    else:
+        spine = ax.spines.get("left")
+        if spine is not None and spine.get_visible():
+            bbox = spine.get_window_extent(renderer=renderer)
+            x_disp = bbox.x0
+        else:
+            bbox = ax.get_window_extent(renderer=renderer)
+            x_disp = bbox.x0
+
+    # y: top of y-axis. if no ticks/labels, use bbox
+    yaxis_bbox = ax.yaxis.get_tightbbox(renderer=renderer)
+    if yaxis_bbox is None:
+        bbox = ax.get_window_extent(renderer=renderer)
+        y_disp = bbox.y1
+    else:
+        y_disp = yaxis_bbox.y1
+
+    x_disp += offset_pixels[0]
+    y_disp += offset_pixels[1]
+    inv = fig.transFigure.inverted()
+    x_fig, y_fig = inv.transform((x_disp, y_disp))
+    if verbose:
+        print(f"Panel {label}: ({x_fig}, {y_fig})")
+    fig.text(x_fig, y_fig, label, ha='right', va='bottom', **text_kwargs)
+
+
+def add_all_letters(axs, letters, verbose=False):
+    assert len(axs) == len(letters), "Number of axes must match number of letters"
+
+    fig = axs[0].figure
+    fig.canvas.draw()
+    for ax, label in zip(axs, letters):
+        add_panel_label(ax, label, offset_pixels=(0, 0), fontsize=7, fontweight="bold", verbose=verbose)
+
+def add_one_letter(ax, letter, x, y):
+    fig = ax.figure
+    fig.text(x, y, letter, ha='right', va='bottom', fontsize=7, fontweight="bold")
