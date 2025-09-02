@@ -299,7 +299,7 @@ def plot_shuffling(shuffles=np.random.randn(1000), pval=0, observed=None, color=
     space_axes(ax, x_ratio_left=.0)
 
 
-def regression_permutation(var, dist_or_tm='dist', varname='', lesioned_animals=False, raisy=0,
+def regression_permutation(var, dist_or_tm='dist', varname_slope='', varname_intercept='', lesioned_animals=False, raisy=0,
                            ax_slope=None, yticks_slope=None, 
                            ax_intercept=None, y_ticks_intercept=None, num_iterations=10000):
     ''' regression with permutation test for the slope and intercept
@@ -378,9 +378,9 @@ def regression_permutation(var, dist_or_tm='dist', varname='', lesioned_animals=
     # r_squared = 1 - (ss_res / ss_total)
     # r = np.sqrt(r_squared)
 
-    print(f'{varname}: p_s={p_value_slope:.3f}, p_i={p_value_intercept:.3f}, obs_slope={observed_slope:.3f}, obs_intercept={observed_intercept:.3f}')
-    plot_shuffling(shuffles=shuffled_slopes, pval=p_value_slope, observed=observed_slope, yticks=yticks_slope, ylabel=f'{varname} slope', ax=ax_slope, color=color, raisy=raisy)
-    plot_shuffling(shuffles=shuffled_intercepts, pval=p_value_intercept, observed=observed_intercept, show_zero=True, yticks=y_ticks_intercept, ylabel=f'{varname} intercept', ax=ax_intercept, color=color)
+    print(f'p_s={p_value_slope:.3f}, p_i={p_value_intercept:.3f}, obs_slope={observed_slope:.3f}, obs_intercept={observed_intercept:.3f}')
+    plot_shuffling(shuffles=shuffled_slopes, pval=p_value_slope, observed=observed_slope, yticks=yticks_slope, ylabel=varname_slope, ax=ax_slope, color=color, raisy=raisy)
+    plot_shuffling(shuffles=shuffled_intercepts, pval=p_value_intercept, observed=observed_intercept, show_zero=True, yticks=y_ticks_intercept, ylabel=varname_intercept, ax=ax_intercept, color=color)
 
 
 def stars(p, maxasterix=3):
