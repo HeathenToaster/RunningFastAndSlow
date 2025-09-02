@@ -1382,3 +1382,144 @@ def add_all_letters(axs, letters, verbose=False):
 def add_one_letter(ax, letter, x, y):
     fig = ax.figure
     fig.text(x, y, letter, ha='right', va='bottom', fontsize=7, fontweight="bold")
+
+
+def compute_regression_permutation(var, dist_or_tm='dist', lesioned_animals=False, num_iterations=10000):
+
+    if lesioned_animals:
+        animalList = ['RatF30', 'RatF31', 'RatM30', 'RatF40', 'RatF41', 'RatM41', 'RatM42',
+                    'RatF50', 'RatF51', 'RatF52', 'RatM50', 'RatM51', 'RatM52']
+    else:
+        animalList = ['RatF00', 'RatF01', 'RatF02', 'RatM00', 'RatM01', 'RatM02', 
+                    'RatF32', 'RatF33', 'RatM31', 'RatM32', 'RatF42', 'RatM40', 'RatM43', 'RatM53', 'RatM54']
+
+    df = pd.DataFrame(columns=['animal', 'parameter', 'cond'])
+
+    _ = {"60": 0, "90": 1, "120": 2, "20": 0, "10": 1, "2": 2, "rev10": 3, "rev20": 4}
+
+    for animal in animalList:
+        if dist_or_tm == 'dist':
+            conds = ["60", "90", "120"]
+        elif dist_or_tm == 'tm':
+            conds = ["20", "10", "2", "rev10", "rev20"]
+        else:
+            raise ValueError("experiment must be 'dist' or 'tm'")
+        for cond in conds:
+            x = float(_[cond])
+            y = var[animal][cond]
+            df = df.append({"animal": animal, "parameter": y, 'cond': x}, ignore_index=True)
+
+    x = df.cond
+    y = df.parameter
+
+    # fit with np.polyfit
+    f = lambda x, *p: np.polyval(p, x)
+    p, cov = curve_fit(f, x, y, [1, 1])
+
+    # shuffle to get p-value
+    observed_slope = p[0]
+    observed_intercept = p[1]
+    slope_sign = np.sign(observed_slope)
+    num_iterations = int(num_iterations)
+    shuffled_slopes = []
+    shuffled_intercepts = []
+
+    np.random.seed(0)
+    for _ in range(num_iterations):
+        shuffled_y = np.random.permutation(y)
+        shuffled_res, _ = curve_fit(f, x, shuffled_y, [1, 1])
+        shuffled_slopes.append(shuffled_res[0])
+        shuffled_intercepts.append(shuffled_res[1])
+
+    # calculate the p-value
+    p_value_slope = (np.abs(shuffled_slopes) >= np.abs(observed_slope)).mean()
+    if observed_intercept >= 0:
+        p_value_intercept = (np.asarray(shuffled_intercepts) <= 0).mean()
+    else:
+        p_value_intercept = (np.asarray(shuffled_intercepts) >= 0).mean()
+
+
+    print(f'p_s={p_value_slope:.3f}, p_i={p_value_intercept:.3f}, obs_slope={observed_slope:.3f}, obs_intercept={observed_intercept:.3f}')
+
+    return shuffled_slopes, p_value_slope, observed_slope, shuffled_intercepts, p_value_intercept, observed_intercept
+
+
+def ridgeline(data, observed_vals=None, pvals=None, overlap=0, labels=None, n_points=1000,
+              x_ticks=None, ax=None, show_zero=False, ylabel=None, xlabel=None, color='lightgray'):
+    """
+    ridgeline plot from https://glowingpython.blogspot.com/2020/03/ridgeline-plots-in-pure-matplotlib.html
+    """
+
+    def _bracket(ax, num1, num2, center, height, dh=.05, barh=.05):
+        lx, ly = center[num1], height[num1]
+        rx, ry = center[num2], height[num2]
+        y = max(ly, ry) + dh
+        barx = [lx, lx, rx, rx]
+        bary = [y, y+barh, y+barh, y]
+        ax.plot(barx, bary, c='k', zorder=10, lw=0.75)
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    
+    if overlap > 1 or overlap < 0:
+        raise ValueError('overlap must be in [0 1]')
+
+    if x_ticks is not None:
+        xx = np.linspace(x_ticks[0], x_ticks[-1], n_points)
+    else:
+        xx = np.linspace(np.min(np.concatenate(data)),
+                        np.max(np.concatenate(data)), n_points)
+
+    ys = []
+    for i, (d, o, p) in enumerate(zip(data, observed_vals, pvals)):
+        pdf = stats.kde.gaussian_kde(d)
+        y = i*(1.0-overlap)
+        ys.append(y)
+        curve = pdf(xx)
+
+        curve = (curve / curve.max()) * 0.75
+
+        ax.fill_between(xx, np.ones(n_points)*y, 
+                            curve+y, zorder=len(data)-i+1, color=color, alpha=0.25, lw=0)
+
+        x_peak_value = xx[np.argmax(curve)]
+        y_peak_value = y + curve.max()
+        ax.plot(xx, curve+y, c=color, zorder=len(data)-i+1)
+
+
+        if show_zero:
+            # _bracket(ax, 0, 1, [0, x_peak_value], [y_peak_value, y_peak_value], dh=curve.max()/10, barh=curve.max()/10)
+            ax.plot([0, 0], [y, y_peak_value], color='gray', linestyle='--', zorder=len(data)-i+1)
+
+        else:
+            # _bracket(ax, 0, 1, [o, x_peak_value], [y_peak_value, y_peak_value], dh=curve.max()/10, barh=curve.max()/10)
+
+            if o is not None:
+                ax.plot([o, o], [y, y_peak_value], color='gray', linestyle='-', zorder=len(data)-i+1)
+
+            
+        color_s = 'gray' if p > 0.05 else 'k'
+        ax.annotate(f"{stars(p)}",  # \nCI: [{lb_slope:.2f}, {ub_slope:.2f}]",
+                    xy=(xx[0], y), xycoords='data',
+                    fontsize=5, ha='left', va='bottom', color=color_s)
+
+    if labels is not None:
+        if len(labels) != len(data):
+            raise ValueError('labels must be the same length as data')
+        if len(ys) != len(labels):
+            raise ValueError('ys must be the same length as labels')
+        ax.set_yticks(ys)
+        ax.set_ylim([0, y])
+        ax.set_yticklabels(labels)
+    
+    if x_ticks is not None:
+        ax.set_xlim([x_ticks[0], x_ticks[1]])
+        ax.set_xticks(x_ticks)
+    
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+
+    space_axes(ax, top_y=1/y)
