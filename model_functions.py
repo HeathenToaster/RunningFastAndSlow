@@ -16,7 +16,7 @@ from plotting import barplot_annotate_brackets
 
 
 # separate the data into time and reward bins
-def prepare_data_idle_times(sequence, animalList, sessionList, memsize=3, time_bins=6):
+def prepare_data_idle_times(sequence, animal_list, sessionList, memsize=3, time_bins=6):
     """prepare data for fitting
     cut the data into time bins and reward bins"""
     bin_size = 3600/time_bins
@@ -24,13 +24,13 @@ def prepare_data_idle_times(sequence, animalList, sessionList, memsize=3, time_b
     temp_data = {}
     for time_bin in range(time_bins):
         temp_data[time_bin] = {}
-        for animal in animalList:
+        for animal in animal_list:
             temp_data[time_bin][animal] = {k: [] for k in meankeys(targetlist)}
             for session in matchsession(animal, sessionList):
                 temp_data[time_bin][animal] = combine_dict(temp_data[time_bin][animal], get_waiting_times(sequence[animal, session], memsize=memsize, filter=[time_bin*bin_size, (time_bin+1)*bin_size]))
 
     data = {}
-    for animal in animalList:
+    for animal in animal_list:
         data[animal] = np.zeros((time_bins, len(meankeys(targetlist)))).tolist()
         for avg_bin, avg in enumerate(meankeys(targetlist)):  # 1 -> 0
             for time_bin in range(time_bins):
@@ -413,18 +413,18 @@ def get_running_times(data, memsize=3, filter=[0, 3600], tooshort=0.1):
 
 
 # separate the data into time and reward bins
-def prepare_data_running_times(sequence, animalList, sessionList, memsize=3, time_bins=6):
+def prepare_data_running_times(sequence, animal_list, sessionList, memsize=3, time_bins=6):
     bin_size = 3600/time_bins
     targetlist = generate_targetList(memsize)[::-1]
     temp_data = {}
     for bin in range(time_bins):
         temp_data[bin] = {}
-        for animal in animalList:
+        for animal in animal_list:
             temp_data[bin][animal] = {k: [] for k in meankeys(targetlist)}
             for session in matchsession(animal, sessionList):
                 temp_data[bin][animal] = combine_dict(temp_data[bin][animal], get_running_times(sequence[animal, session], memsize=memsize, filter=[bin*bin_size, (bin+1)*bin_size]))
     data = {}
-    for animal in animalList:
+    for animal in animal_list:
         data[animal] = np.zeros((time_bins, len(meankeys(targetlist)))).tolist()
         for i, avg in enumerate(meankeys(targetlist)):  # 1 -> 0
             for bin in range(time_bins):
@@ -532,16 +532,26 @@ def modelrun_fit(data, init=[1, 1, 1, 1, 1, 1], f=modelrun_crit,
     return res.x, res.fun
 
 
-def process_error_idle_time(root, animalList, sessionList, n_simul=10000):
+def process_error_idle_time(root, animal_list, sessionList, n_simul=10000):
     N_bins = 6
     N_avg = 4
     _alpha, _alpha_t, _alpha_u, _gamma, _gamma_t, _gamma_u, _, _, _, _, _, _ = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
     blocks =  [[0, 300],  [300, 600],  [600, 900],  [900, 1200],
                 [1200, 1500],  [1500, 1800],  [1800, 2100],  [2100, 2400],
                 [2400, 2700],  [2700, 3000],  [3000, 3300],  [3300, 3600]]
-    error = {}
+    
 
-    for animal in animalList:
+    if os.path.exists("picklejar/modelErrorInterRunDuration10000.p"):
+        error = pickle.load(open("picklejar/modelErrorInterRunDuration10000.p", "rb"))
+    else:
+        error = {}
+    has_changed = False
+
+    for animal in animal_list:
+        if animal in error.keys() and error[animal].shape[0] == n_simul:
+            print(f'Skipping {animal}, already computed and has {n_simul} simulations')
+            continue
+        has_changed = True
         print(f'Computing for {animal}')
         sessions = matchsession(animal, sessionList)
         data = [[],[],[],[],[],[],[],[],[],[],[],[]]
@@ -579,21 +589,35 @@ def process_error_idle_time(root, animalList, sessionList, n_simul=10000):
             #     print(f'Rat: {animal} || {_}/{n_simul}')
             res = [np.median(generate_idle_time(a[i], g[i], len(data[i]), seed=_)) for i in range(len(blocks))]   
             error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
+
+    if has_changed:
+        print('Saving because has changed')
+        pickle.dump(error, open("picklejar/modelErrorInterRunDuration10000.p", "wb"))
     
     return error
 
 
 
-def process_error_crossing_time(root, animalList, sessionList, n_simul=10000):
+
+def process_error_crossing_time(root, animal_list, sessionList, n_simul=10000):
     N_bins = 6
     N_avg = 4
     _, _, _, _, _, _, _mu, _mu_t, _mu_u, _sigma, _sigma_t, _sigma_u = pickle.load(open("picklejar/ModelsFitsAllRats.p", "rb"))
     blocks =  [[0, 300],  [300, 600],  [600, 900],  [900, 1200],
                 [1200, 1500],  [1500, 1800],  [1800, 2100],  [2100, 2400],
                 [2400, 2700],  [2700, 3000],  [3000, 3300],  [3300, 3600]]
-    error = {}
 
-    for animal in animalList:
+    if os.path.exists("picklejar/modelErrorRunDuration10000.p"):
+        error = pickle.load(open("picklejar/modelErrorRunDuration10000.p", "rb"))
+    else:
+        error = {}
+    has_changed = False
+
+    for animal in animal_list:
+        if animal in error.keys() and error[animal].shape[0] == n_simul:
+            print(f'Skipping {animal}, already computed and has {n_simul} simulations')
+            continue
+        has_changed = True
         print(f'Computing for {animal}')
         sessions = matchsession(animal, sessionList)
         data = [[],[],[],[],[],[],[],[],[],[],[],[]]
@@ -630,12 +654,16 @@ def process_error_crossing_time(root, animalList, sessionList, n_simul=10000):
             res = [np.median(generate_running_time(m[i], s[i], len(data[i]), seed=_)) for i in range(len(blocks))]
             error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
     
+    if has_changed:
+        print('Saving because has changed')
+        pickle.dump(error, open("picklejar/modelErrorRunDuration10000.p", "wb"))
+
     return error
 
 
-def LLratio_vs_complete(ablation_losses, keys, animalList, ax=None):
+def LLratio_vs_complete(ablation_losses, keys, animal_list, ax=None):
     if ax is None: fig, ax = plt.subplots(1, 1, figsize=(4, 4))
-    LL_sums = [np.sum([ablation_losses[animal][key] for animal in animalList]) for key in keys]
+    LL_sums = [np.sum([ablation_losses[animal][key] for animal in animal_list]) for key in keys]
     LL_complete = LL_sums[0]
     LL_reduced = LL_sums[1:]
     dParams = [np.sum(key) for key in keys][1:]

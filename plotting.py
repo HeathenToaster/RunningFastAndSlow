@@ -299,7 +299,8 @@ def plot_shuffling(shuffles=np.random.randn(1000), pval=0, observed=None, color=
     space_axes(ax, x_ratio_left=.0)
 
 
-def regression_permutation(var, dist_or_tm='dist', varname_slope='', varname_intercept='', lesioned_animals=False, raisy=0,
+def regression_permutation(var, dist_or_tm='dist', varname_slope='', varname_intercept='', raisy=0,
+                           animal_list=[], color='k',
                            ax_slope=None, yticks_slope=None, 
                            ax_intercept=None, y_ticks_intercept=None, num_iterations=10000):
     ''' regression with permutation test for the slope and intercept
@@ -316,20 +317,11 @@ def regression_permutation(var, dist_or_tm='dist', varname_slope='', varname_int
     if ax_slope is None and ax_intercept is None:
         fig, (ax_slope, ax_intercept) = plt.subplots(1, 2, figsize=(4, 2))
 
-    if lesioned_animals:
-        color = 'xkcd:kiwi green'
-        animalList = ['RatF30', 'RatF31', 'RatM30', 'RatF40', 'RatF41', 'RatM41', 'RatM42',
-                    'RatF50', 'RatF51', 'RatF52', 'RatM50', 'RatM51', 'RatM52']
-    else:
-        color='gray'
-        animalList = ['RatF00', 'RatF01', 'RatF02', 'RatM00', 'RatM01', 'RatM02', 
-                    'RatF32', 'RatF33', 'RatM31', 'RatM32', 'RatF42', 'RatM40', 'RatM43', 'RatM53', 'RatM54']
-
     df = pd.DataFrame(columns=['animal', 'parameter', 'cond'])
 
     _ = {"60": 0, "90": 1, "120": 2, "20": 0, "10": 1, "2": 2, "rev10": 3, "rev20": 4}
 
-    for animal in animalList:
+    for animal in animal_list:
         if dist_or_tm == 'dist':
             conds = ["60", "90", "120"]
         elif dist_or_tm == 'tm':
@@ -463,14 +455,14 @@ def barplot_annotate_brackets(ax, num1, num2, data, center, height, dh=.05, barh
     ax.text(*mid, text, color=color, **kwargs)
 
 
-def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animalList=[], 
+def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animal_list=[], 
                shift_tm=False, err=None, label=False, color='k'):
     '''plot median of data with error bars
     var: dictionary of data (a model parameter)
     ax: axis to plot on
     dist_or_tm: 'dist' or 'tm'
     do: ... was faster to implement than to remove everywhere
-    animalList: list of animals to plot
+    animal_list: list of animals to plot
     shift_tm: shift the tm data
     err: error to plot, can be 'sem', 'std', 'percentile'
     label: label the plot or not
@@ -483,34 +475,34 @@ def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animalList=[],
             fig, ax = plt.subplots(1, 1, figsize=(cm2inch(4), cm2inch(4)))
 
         shift = .125
-        if animalList == []:
-            animalList = list(var.keys())
+        if animal_list == []:
+            animal_list = list(var.keys())
 
         if dist_or_tm == 'dist':
             x = [0 + shift, 1 + shift, 2 + shift]
-            y = [np.median([var[animal]["60"] for animal in animalList]),
-                    np.median([var[animal]["90"] for animal in animalList]),
-                    np.median([var[animal]["120"] for animal in animalList])]
+            y = [np.median([var[animal]["60"] for animal in animal_list]),
+                    np.median([var[animal]["90"] for animal in animal_list]),
+                    np.median([var[animal]["120"] for animal in animal_list])]
 
             if err is not None:
                 if err == 'sem':
-                    err = [stats.sem([var[animal]["60"] for animal in animalList]),
-                            stats.sem([var[animal]["90"] for animal in animalList]),
-                            stats.sem([var[animal]["120"] for animal in animalList])]
+                    err = [stats.sem([var[animal]["60"] for animal in animal_list]),
+                            stats.sem([var[animal]["90"] for animal in animal_list]),
+                            stats.sem([var[animal]["120"] for animal in animal_list])]
 
                 elif err == 'std':
-                    err = [np.std([var[animal]["60"] for animal in animalList]),
-                            np.std([var[animal]["90"] for animal in animalList]),
-                            np.std([var[animal]["120"] for animal in animalList])]
+                    err = [np.std([var[animal]["60"] for animal in animal_list]),
+                            np.std([var[animal]["90"] for animal in animal_list]),
+                            np.std([var[animal]["120"] for animal in animal_list])]
 
                 elif err == 'percentile':
                     bot, top = 25, 75
                     err = []
 
                     for cond in ['60', '90', '120']:
-                        median = np.median([var[animal][cond] for animal in animalList])
-                        percentile_bot = np.percentile([var[animal][cond] for animal in animalList], bot)
-                        percentile_top = np.percentile([var[animal][cond] for animal in animalList], top)
+                        median = np.median([var[animal][cond] for animal in animal_list])
+                        percentile_bot = np.percentile([var[animal][cond] for animal in animal_list], bot)
+                        percentile_top = np.percentile([var[animal][cond] for animal in animal_list], top)
                         err.append([median - percentile_bot, percentile_top - median])
                     err = np.array(err).T
 
@@ -520,7 +512,7 @@ def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animalList=[],
             if label:
                 ax.errorbar(x, y, yerr=err, capsize=0,
                             color=color, marker='D', markersize=2, linestyle='-', lw=1.5, elinewidth=1,
-                            label=f'Median (n={len(animalList)})', zorder=100)
+                            label=f'Median (n={len(animal_list)})', zorder=100)
             else:
                 ax.errorbar(x, y, yerr=err, capsize=0,
                             color=color, marker='D', markersize=2, linestyle='-', lw=1.5, elinewidth=1, zorder=100)
@@ -531,35 +523,35 @@ def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animalList=[],
             else:
                 x = [0 + shift, 1 + shift, 2 + shift, 3 + shift, 4 + shift]
 
-            y = [np.median([var[animal]["20"] for animal in animalList]),
-                    np.median([var[animal]["10"] for animal in animalList]),
-                    np.median([var[animal]["2"] for animal in animalList]),
-                    np.median([var[animal]["rev10"] for animal in animalList]),
-                    np.median([var[animal]["rev20"] for animal in animalList])]
+            y = [np.median([var[animal]["20"] for animal in animal_list]),
+                    np.median([var[animal]["10"] for animal in animal_list]),
+                    np.median([var[animal]["2"] for animal in animal_list]),
+                    np.median([var[animal]["rev10"] for animal in animal_list]),
+                    np.median([var[animal]["rev20"] for animal in animal_list])]
 
             if err is not None:
                 if err == 'sem':
-                    err = [stats.sem([var[animal]["20"] for animal in animalList]),
-                            stats.sem([var[animal]["10"] for animal in animalList]),
-                            stats.sem([var[animal]["2"] for animal in animalList]),
-                            stats.sem([var[animal]["rev10"] for animal in animalList]),
-                            stats.sem([var[animal]["rev20"] for animal in animalList])]
-                
+                    err = [stats.sem([var[animal]["20"] for animal in animal_list]),
+                            stats.sem([var[animal]["10"] for animal in animal_list]),
+                            stats.sem([var[animal]["2"] for animal in animal_list]),
+                            stats.sem([var[animal]["rev10"] for animal in animal_list]),
+                            stats.sem([var[animal]["rev20"] for animal in animal_list])]
+
                 elif err == 'std':
-                    err = [np.std([var[animal]["20"] for animal in animalList]),
-                            np.std([var[animal]["10"] for animal in animalList]),
-                            np.std([var[animal]["2"] for animal in animalList]),
-                            np.std([var[animal]["rev10"] for animal in animalList]),
-                            np.std([var[animal]["rev20"] for animal in animalList])]
-                
+                    err = [np.std([var[animal]["20"] for animal in animal_list]),
+                            np.std([var[animal]["10"] for animal in animal_list]),
+                            np.std([var[animal]["2"] for animal in animal_list]),
+                            np.std([var[animal]["rev10"] for animal in animal_list]),
+                            np.std([var[animal]["rev20"] for animal in animal_list])]
+
                 elif err == 'percentile':
                     bot, top = 25, 75
                     err = []
 
                     for cond in ['20', '10', '2', 'rev10', 'rev20']:
-                        median = np.median([var[animal][cond] for animal in animalList])
-                        percentile_bot = np.percentile([var[animal][cond] for animal in animalList], bot)
-                        percentile_top = np.percentile([var[animal][cond] for animal in animalList], top)
+                        median = np.median([var[animal][cond] for animal in animal_list])
+                        percentile_bot = np.percentile([var[animal][cond] for animal in animal_list], bot)
+                        percentile_top = np.percentile([var[animal][cond] for animal in animal_list], top)
                         err.append([median - percentile_bot, percentile_top - median])
                     err = np.array(err).T
                 else:
@@ -568,7 +560,7 @@ def plotmedian(var, ax=None, dist_or_tm='dist', do=True, animalList=[],
             if label:
                 ax.errorbar(x, y, yerr=err, capsize=0,
                             color=color, marker='D', markersize=2, linestyle='-', lw=1.5, elinewidth=1,
-                            label=f'Median (n={len(animalList)})', zorder=100)
+                            label=f'Median (n={len(animal_list)})', zorder=100)
             else:
                 ax.errorbar(x, y, yerr=err, capsize=0, color=color, marker='D', 
                             markersize=2, linestyle='-', lw=1.5, elinewidth=1, zorder=100)
@@ -650,6 +642,27 @@ def create_kiwi_green_palette(num_shades=10, start_intensity=50, end_intensity=2
         lighter = lighten_color(kiwi_green_color)
         kiwi_green_palette.append(lighter)
     return kiwi_green_palette
+
+
+def create_red_palette(num_shades=10, start_intensity=150, end_intensity=254):
+    """
+    Create a palette of shades of red.
+
+    Parameters:
+        num_shades (int): Number of shades to generate.
+        start_intensity (int): Starting intensity of red color (0 to 255).
+        end_intensity (int): Ending intensity of red color (0 to 255).
+
+    Returns:
+        list: List of RGB tuples representing shades of red.
+    """
+    palette = []
+    intensity_values = np.linspace(start_intensity, end_intensity, num_shades)
+    for intensity in intensity_values:
+        color = np.array((int(intensity), 25, 25)) / 255
+        lighter = lighten_color(color, factor=0.2)
+        palette.append(lighter)
+    return palette
 
 
 def listed_to_linear(listed_cmap, num_shades=256):
@@ -1384,20 +1397,13 @@ def add_one_letter(ax, letter, x, y):
     fig.text(x, y, letter, ha='right', va='bottom', fontsize=7, fontweight="bold")
 
 
-def compute_regression_permutation(var, dist_or_tm='dist', lesioned_animals=False, num_iterations=10000):
-
-    if lesioned_animals:
-        animalList = ['RatF30', 'RatF31', 'RatM30', 'RatF40', 'RatF41', 'RatM41', 'RatM42',
-                    'RatF50', 'RatF51', 'RatF52', 'RatM50', 'RatM51', 'RatM52']
-    else:
-        animalList = ['RatF00', 'RatF01', 'RatF02', 'RatM00', 'RatM01', 'RatM02', 
-                    'RatF32', 'RatF33', 'RatM31', 'RatM32', 'RatF42', 'RatM40', 'RatM43', 'RatM53', 'RatM54']
+def compute_regression_permutation(var, dist_or_tm='dist', animal_list=[], num_iterations=10000):
 
     df = pd.DataFrame(columns=['animal', 'parameter', 'cond'])
 
     _ = {"60": 0, "90": 1, "120": 2, "20": 0, "10": 1, "2": 2, "rev10": 3, "rev20": 4}
 
-    for animal in animalList:
+    for animal in animal_list:
         if dist_or_tm == 'dist':
             conds = ["60", "90", "120"]
         elif dist_or_tm == 'tm':
@@ -1523,3 +1529,57 @@ def ridgeline(data, observed_vals=None, pvals=None, overlap=0, labels=None, n_po
         ax.set_xlabel(xlabel)
 
     space_axes(ax, top_y=1/y)
+
+
+
+def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, ax=None, show_xlabel=False, show_ylabel=False, hide_y=False,
+                         animal_list=[], median_color='k'):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+ 
+    if dist_or_tm == 'dist':
+        x = [0, 1, 2]
+        conds = ["60", "90", "120"]
+        xticklabels = ["60", "90", "120"]
+        _ = r'$d$'
+        xlabel = f'{_} (cm)'
+    elif dist_or_tm == 'tm':
+        x = [0, 1, 2, 3, 4]
+        conds = ["20", "10", "2", "rev10", "rev20"]
+        xticklabels = ["20", "10", "±2", "-10", "-20"]
+        _ = r'$v_{belt}$'
+        xlabel = f'{_} (cm/s)'
+
+    for animal in animal_list:
+        ax.plot(x, [params['fit'][animal][cond] for cond in conds], 
+                    color=rat_markers[animal][0], marker=rat_markers[animal][1], lw=.75,
+                    markersize=2)
+        
+    if show_ex:
+        ax.plot(2, params['ex_fit'], color='black', marker='^', zorder=10, markersize=2, linewidth=0, label='Example session')
+
+
+    ax.axhline(0, color='dimgray', linestyle='--', linewidth=1, alpha=1, zorder=0, xmin=.1, xmax=.9)
+
+    ax.set_xlim(x[0], x[-1])
+    ax.set_xticks(x)
+    ax.set_xticklabels(xticklabels)
+    if show_xlabel:
+        ax.set_xlabel(xlabel)
+    else:
+        ax.set_xlabel(" ")
+
+    ax.set_ylim(params['yticks'][0], params['yticks'][-1])
+    ax.set_yticks(params['yticks'])
+    if params['ylabel'] != 'Run Speed':
+        ax.yaxis.set_major_formatter('{x:<5.2f}')
+    if show_ylabel:
+        ax.set_ylabel(params['ylabel'])
+    if hide_y:
+        ax.spines['left'].set_visible(False)
+        ax.tick_params(left=False, labelleft=False)
+
+    space_axes(ax, x_ratio_left=.1, x_ratio_right=.1)
+    plotmedian(params['fit'], ax=ax, dist_or_tm=dist_or_tm, animal_list=animal_list, err='percentile', color=median_color)
+

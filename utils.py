@@ -337,7 +337,7 @@ def compute_centroid(ROI):
 # compute the average weight for each animal from all sessions
 # need params.p for each session
 # avgweight = {}
-# for animal in animalList:
+# for animal in animal_list:
 #     avgweight[animal] = []
 #     for session in matchsession(animal,  dist60+dist90+dist120 + TM20+TM10+TM2+TMrev2+TMrev10+TMrev20):
 #         _params = get_from_pickle(root, animal[0:6], session, name="params.p")
