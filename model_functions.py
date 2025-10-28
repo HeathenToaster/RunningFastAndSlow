@@ -8,6 +8,7 @@ from scipy import stats
 from scipy.integrate import simps
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
+from multiprocessing import Pool, cpu_count
 
 from utils import *
 from plotting import barplot_annotate_brackets
@@ -532,6 +533,28 @@ def modelrun_fit(data, init=[1, 1, 1, 1, 1, 1], f=modelrun_crit,
     return res.x, res.fun
 
 
+
+def process_one_rat_idle(args):
+    root, animal, sessions, n_simul, _alpha, _alpha_t, _alpha_u, _gamma, _gamma_t, _gamma_u = args
+    print(f"Computing for {animal}")
+
+    data = [[],[],[],[],[],[],[],[],[],[],[],[]]
+    for i, session in enumerate(sessions):
+        example_idleTimeInLeftBin, example_idleTimeInRightBin = get_from_pickle(root, animal, session, name="timeinZone.p")
+        for j in range(0, 12):
+            data[j] = np.append(data[j], example_idleTimeInLeftBin[j]+example_idleTimeInRightBin[j])
+
+    a = reconstruct_param(_alpha, _alpha_t, _alpha_u)
+    g = reconstruct_param(_gamma, _gamma_t, _gamma_u)
+
+    res = np.zeros((n_simul, 12))
+    for k in range(n_simul):
+        sim = [np.median(generate_idle_time(a[i], g[i], len(data[i]), seed=k))
+            for i in range(12)]
+        res[k] = [np.sqrt((np.median(data[i]) - sim[i]) ** 2) for i in range(12)]
+    return animal, res
+    
+
 def process_error_idle_time(root, animal_list, sessionList, n_simul=10000):
     N_bins = 6
     N_avg = 4
@@ -545,58 +568,51 @@ def process_error_idle_time(root, animal_list, sessionList, n_simul=10000):
         error = pickle.load(open("picklejar/modelErrorInterRunDuration10000.p", "rb"))
     else:
         error = {}
-    has_changed = False
+    todo = []
 
     for animal in animal_list:
         if animal in error.keys() and error[animal].shape[0] == n_simul:
             print(f'Skipping {animal}, already computed and has {n_simul} simulations')
             continue
-        has_changed = True
-        print(f'Computing for {animal}')
         sessions = matchsession(animal, sessionList)
-        data = [[],[],[],[],[],[],[],[],[],[],[],[]]
-        for i, session in enumerate(sessions):
-            example_idleTimeInLeftBin, example_idleTimeInRightBin = get_from_pickle(root, animal, session, name="timeinZone.p")
-            for j in range(0, 12):
-                data[j] = np.append(data[j], example_idleTimeInLeftBin[j]+example_idleTimeInRightBin[j])
-    
-        ex_alpha = _alpha[animal]['120']
-        ex_alpha_t = _alpha_t[animal]['120']
-        ex_alpha_u = _alpha_u[animal]['120']
-        ex_gamma = _gamma[animal]['120']
-        ex_gamma_t = _gamma_t[animal]['120']
-        ex_gamma_u = _gamma_u[animal]['120']
+        todo.append((root, animal, sessions, n_simul,
+                     _alpha[animal]['120'], _alpha_t[animal]['120'], _alpha_u[animal]['120'],
+                     _gamma[animal]['120'], _gamma_t[animal]['120'], _gamma_u[animal]['120']))
+        
+    if not todo:
+        print('All computed')
+        return error
 
-        ALPHA = np.zeros((N_bins, N_avg))
-        GAMMA = np.zeros((N_bins, N_avg))
-        for bin in range(N_bins):
-            for avg in range(N_avg):
-                ALPHA[bin, avg] = ex_alpha + bin*ex_alpha_t + avg*ex_alpha_u
-                GAMMA[bin, avg] = ex_gamma + bin*ex_gamma_t + avg*ex_gamma_u
+    n_proc = min(cpu_count(), len(todo))
+    print(f"Running with {n_proc} processes for {len(todo)} rats...")
+    with Pool(n_proc) as pool:
+        for animal, res in pool.imap_unordered(process_one_rat_idle, todo):
+            error[animal] = res
 
-        a = []
-        g = []
-        for i in range(6):
-            a.append(.9*ALPHA[i][0]+0.1*ALPHA[i][1])
-            a.append(.9*ALPHA[i][-1]+0.1*ALPHA[i][-2])
-            g.append(.9*GAMMA[i][0]+0.1*GAMMA[i][1])
-            g.append(.9*GAMMA[i][-1]+0.1*GAMMA[i][-2])
-
-
-        error[animal] = np.zeros((n_simul, 12))
-        for _ in range(n_simul):
-            # if _ // 1000 == 0:
-            #     print(f'Rat: {animal} || {_}/{n_simul}')
-            res = [np.median(generate_idle_time(a[i], g[i], len(data[i]), seed=_)) for i in range(len(blocks))]   
-            error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
-
-    if has_changed:
-        print('Saving because has changed')
-        pickle.dump(error, open("picklejar/modelErrorInterRunDuration10000.p", "wb"))
-    
+    print('Saving because has changed')
+    pickle.dump(error, open("picklejar/modelErrorInterRunDuration10000.p", "wb"))
     return error
 
 
+def process_one_rat_run(args):
+    root, animal, sessions, n_simul, _mu, _mu_t, _mu_u, _sigma, _sigma_t, _sigma_u = args
+    print(f"Computing for {animal}")
+
+    data = [[],[],[],[],[],[],[],[],[],[],[],[]]
+    for i, session in enumerate(sessions):
+        example_runningTimeInLeftBin, example_runningTimeInRightBin = get_from_pickle(root, animal, session, name="timeRun.p")
+        for j in range(0, 12):
+            data[j] = np.append(data[j], example_runningTimeInLeftBin[j]+example_runningTimeInRightBin[j])
+
+    m = reconstruct_param(_mu, _mu_t, _mu_u)
+    s = reconstruct_param(_sigma, _sigma_t, _sigma_u)
+
+    res = np.zeros((n_simul, 12))
+    for k in range(n_simul):
+        sim = [np.median(generate_running_time(m[i], s[i], len(data[i]), seed=k))
+            for i in range(12)]
+        res[k] = [np.sqrt((np.median(data[i]) - sim[i]) ** 2) for i in range(12)]
+    return animal, res
 
 
 def process_error_crossing_time(root, animal_list, sessionList, n_simul=10000):
@@ -611,53 +627,28 @@ def process_error_crossing_time(root, animal_list, sessionList, n_simul=10000):
         error = pickle.load(open("picklejar/modelErrorRunDuration10000.p", "rb"))
     else:
         error = {}
-    has_changed = False
+    todo = []
 
     for animal in animal_list:
         if animal in error.keys() and error[animal].shape[0] == n_simul:
             print(f'Skipping {animal}, already computed and has {n_simul} simulations')
             continue
-        has_changed = True
-        print(f'Computing for {animal}')
         sessions = matchsession(animal, sessionList)
-        data = [[],[],[],[],[],[],[],[],[],[],[],[]]
-        for i, session in enumerate(sessions):
-            example_runningTimeInLeftBin, example_runningTimeInRightBin = get_from_pickle(root, animal, session, name="timeRun.p")
-            for j in range(0, 12):
-                data[j] = np.append(data[j], example_runningTimeInLeftBin[j]+example_runningTimeInRightBin[j])
-    
-        ex_mu = _mu[animal]['120']
-        ex_mu_t = _mu_t[animal]['120']
-        ex_mu_u = _mu_u[animal]['120']
-        ex_sigma = _sigma[animal]['120']
-        ex_sigma_t = _sigma_t[animal]['120']
-        ex_sigma_u = _sigma_u[animal]['120']
+        todo.append((root, animal, sessions, n_simul,
+                     _mu[animal]['120'], _mu_t[animal]['120'], _mu_u[animal]['120'],
+                     _sigma[animal]['120'], _sigma_t[animal]['120'], _sigma_u[animal]['120']))
+    if not todo:
+        print('All computed')
+        return error
 
+    n_proc = min(cpu_count(), len(todo))
+    print(f"Running with {n_proc} processes for {len(todo)} rats...")
+    with Pool(n_proc) as pool:
+        for animal, res in pool.imap_unordered(process_one_rat_run, todo):
+            error[animal] = res
 
-        MU = np.zeros((N_bins, N_avg))
-        SIGMA = np.zeros((N_bins, N_avg))
-        for bin in range(N_bins):
-            for avg in range(N_avg):
-                MU[bin, avg] = ex_mu + bin*ex_mu_t + avg*ex_mu_u
-                SIGMA[bin, avg] = ex_sigma + bin*ex_sigma_t + avg*ex_sigma_u
-
-        m = []
-        s = []
-        for i in range(6):
-            m.append((.9*MU[i][0] + 0.1*MU[i][1]))
-            m.append((.9*MU[i][-1] + 0.1*MU[i][-2]))
-            s.append((.9*SIGMA[i][0] + 0.1*SIGMA[i][1]))
-            s.append((.9*SIGMA[i][-1] + 0.1*SIGMA[i][-2]))
-
-        error[animal] = np.zeros((n_simul, 12))
-        for _ in range(n_simul):
-            res = [np.median(generate_running_time(m[i], s[i], len(data[i]), seed=_)) for i in range(len(blocks))]
-            error[animal][_] = [np.sqrt((np.median(data[i]) - res[i])**2) for i in range(0, len(blocks))]
-    
-    if has_changed:
-        print('Saving because has changed')
-        pickle.dump(error, open("picklejar/modelErrorRunDuration10000.p", "wb"))
-
+    print('Saving because has changed')
+    pickle.dump(error, open("picklejar/modelErrorRunDuration10000.p", "wb"))
     return error
 
 
@@ -679,3 +670,42 @@ def LLratio_vs_complete(ablation_losses, keys, animal_list, ax=None):
                                   [-LL_complete]*6, 
                                   dh=0.15+i*.1, barh=.025, maxasterix=None)
 
+
+def correct_weights(p, n=3):
+    def _fact(x):
+        result = 1
+        for i in range(1, x+1):
+            result *= i
+        return result
+    def _nCk(n, k):
+        return _fact(n) // (_fact(k) * _fact(n-k))
+
+    return [_nCk(n, k) * (p ** k) * ((1 - p) ** (n - k)) for k in range(n + 1)]
+
+
+def reconstruct_param(param_0, param_t, param_u, corrected_weights=True):
+    N_bins, N_avg = 6, 4
+    PARAM = np.zeros((N_bins, N_avg))
+
+    for bin in range(N_bins):
+        for avg in range(N_avg):
+            PARAM[bin, avg] = param_0 + bin*param_t + avg*param_u
+
+    prob_reward_90 = correct_weights(0.9, 3)
+    prob_reward_10 = correct_weights(0.1, 3)
+
+    reconstructed = []
+    for i in range(6):
+        if corrected_weights:
+            reconstructed.append(prob_reward_90[3]*PARAM[i][0] + \
+                                 prob_reward_90[2]*PARAM[i][1] + \
+                                 prob_reward_90[1]*PARAM[i][2] + \
+                                 prob_reward_90[0]*PARAM[i][3])
+            reconstructed.append(prob_reward_10[3]*PARAM[i][0] + \
+                                 prob_reward_10[2]*PARAM[i][1] + \
+                                 prob_reward_10[1]*PARAM[i][2] + \
+                                 prob_reward_10[0]*PARAM[i][3])
+        else:
+            reconstructed.append(.9*PARAM[i][0]+0.1*PARAM[i][1])
+            reconstructed.append(.9*PARAM[i][-1]+0.1*PARAM[i][-2])
+    return reconstructed
