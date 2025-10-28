@@ -238,14 +238,13 @@ def stitch(input):
 ####################################
 # Histology functions
 ####################################
-
 def read_ROI_from_csv(file_path):
     ROI = []
     try:
         with open(file_path, mode='r', newline='') as csv_file:
             csv_reader = csv.reader(csv_file)
             for row in csv_reader:
-                if len(row) == 2:
+                if len(row) == 2:  # csv
                     try:
                         x = round(float(row[0]))
                         y = round(float(row[1]))
@@ -255,6 +254,14 @@ def read_ROI_from_csv(file_path):
                             continue
                         else:
                             print(f"Skipping invalid row: {row}")
+                elif len(row) == 1:  # tsv
+                    try:
+                        x_str, y_str = row[0].split('\t')
+                        x = float(x_str)
+                        y = float(y_str)
+                        ROI.append((x, y))
+                    except ValueError:
+                        print(f"Skipping invalid row: {row}")
                 else:
                     print(f"Skipping row with incorrect number of columns: {row}")
     except FileNotFoundError:
