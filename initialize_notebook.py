@@ -6,16 +6,6 @@ from plotting import (create_teal_palette, create_blue_violet_palette,
 # Define root for behavioral data 'path/to/DATA'
 root = "DATA" # simlink: ln -s /home/thomas/Desktop/ALLDATA DATA
 
-
-# TODO:
-# remove all instances of RatM00_2021_07_22_16_13_03 ok
-# remove all instances of RatM00 ok
-# remove all instances of animalList ok
-# reprocess all pickles.
-# fix sessionlists
-# fit and process ok?
-
-
 def initialize_notebook(root=root, ):
 
     print(f'Found {len(glob.glob(root+"/R*"))} rats in the {root} folder')
@@ -26,20 +16,22 @@ def initialize_notebook(root=root, ):
     # Define rat lists
     intact_rats = ['RatF00', 'RatF01', 'RatF02', 'RatM00', 'RatM01', 'RatM02',
                    'RatF32', 'RatF33', 'RatM31', 'RatM32', 'RatF42', 'RatM40', 'RatM43',
-                   'RatM53', 'RatM54', #'Raz41F', 'Raz42F', 'Raz46M', 'Raz47M'
+                   'RatM53', 'RatM54', 'Raz41F', 'Raz42F', 'Raz46M', 'Raz47M'
                    ] 
     DSlesioned_rats = ['RatF30', 'RatF31', 'RatM30', 'RatF40', 'RatF41', 'RatM41', 'RatM42',
                        'RatF50', 'RatF51', 'RatF52', 'RatM50', 'RatM51', 'RatM52',
-                    #    'Raz52F', 'Raz53M', 'Raz55M'
+                        # 'Raz52F',  Not doing task 
+                        # 'Raz53M',  Weird fits, but could be added
+                        'Raz55M'
                        ]
     VSlesioned_rats = [
-        # 'Raz10F', 'Raz11F', 'Raz13F', 'Raz16M',
-        #                'Raz30F', 'Raz31F','Raz33M', 'Raz34M', 'Raz35M',
-        #                'Raz40F', 'Raz43M', 'Raz44M', 'Raz45M',
-        #                'Raz56M', 'Raz57M'
+        'Raz10F', 'Raz11F', 'Raz13F', 'Raz16M',
+                       'Raz30F', 'Raz31F','Raz33M', 'Raz34M', 'Raz35M',
+                       'Raz40F', 'Raz43M', 'Raz44M', 'Raz45M',
+                       'Raz56M', 'Raz57M'
                        ]
     sham_rats = [
-        # 'Raz14F', 'Raz19M', 'Raz32F',  'Raz36M'
+        'Raz14F', 'Raz19M', 'Raz32F', 'Raz36M'
                  ]
     all_rats = intact_rats + DSlesioned_rats + VSlesioned_rats + sham_rats
     rat_lists = intact_rats, DSlesioned_rats, VSlesioned_rats, sham_rats, all_rats
