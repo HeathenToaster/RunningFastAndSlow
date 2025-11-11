@@ -12,6 +12,8 @@ from scipy import stats
 import pandas as pd
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.patches import Ellipse
+import matplotlib.transforms as transforms
 from scipy.optimize import curve_fit
 
 from utils import *
@@ -736,7 +738,7 @@ def add_colored_intact(ax=None, handles=[], labels=[], text='Intact rats (n=15)'
 
 
 def add_colored_lesion(ax=None, handles=[], labels=[], text='Lesioned rats (n=13)', 
-                       type='line', do_return=False, ncol=1,
+                       type='line', do_return=False, ncol=1, group='DS',
                        loc='upper left', bbox=(0.01, 0.99)):
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
@@ -744,16 +746,22 @@ def add_colored_lesion(ax=None, handles=[], labels=[], text='Lesioned rats (n=13
     assert type in ['line', 'circle'], "type must be either 'line' or 'circle', or to be implemented"
     
     num_shades = 256
-    kiwi_palette = create_kiwi_green_palette(num_shades)
 
-    kiwi_cmap = ListedColormap(kiwi_palette)
-    kiwi_linear = listed_to_linear(kiwi_cmap, num_shades=num_shades)
+    if group == 'DS':
+        palette = create_kiwi_green_palette(num_shades)
+    elif group == 'VS':
+        palette = create_red_palette(num_shades)
+    else:
+        raise ValueError("group must be either 'DS' or 'VS'")
+
+    cmap = ListedColormap(palette)
+    cmap_linear = listed_to_linear(cmap, num_shades=num_shades)
 
     if type =='line':
-        cmap_gradients = kiwi_linear(np.linspace(0, 1, num_shades))
+        cmap_gradients = cmap_linear(np.linspace(0, 1, num_shades))
         patches_cmaps_gradients = [[Line2D([0, 1], [0, 1], color=c) for c in cmap_gradients]]
     elif type == 'circle':
-        cmap_gradients = kiwi_linear(np.linspace(0, 1, 7))
+        cmap_gradients = cmap_linear(np.linspace(0, 1, 7))
         patches_cmaps_gradients = [[Line2D([0], [0], marker='o', lw=0, color=c, ms=np.sqrt(5)) for c in cmap_gradients]]
     else:
         raise ValueError("Not implemented yet")
@@ -1580,6 +1588,87 @@ def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, 
         ax.spines['left'].set_visible(False)
         ax.tick_params(left=False, labelleft=False)
 
-    space_axes(ax, x_ratio_left=.1, x_ratio_right=.1)
+    space_axes(ax, x_ratio_left=.1, x_ratio_right=.1, top_y=0.05)
     plotmedian(params['fit'], ax=ax, dist_or_tm=dist_or_tm, animal_list=animal_list, err='percentile', color=median_color)
 
+
+def confidence_ellipse(x, y, ax=None, n_std=2.0, color='k', fill=True, zorder=0):
+    '''From https://matplotlib.org/devdocs/gallery/statistics/confidence_ellipse.html'''
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(2, 2))
+
+    cov = np.cov(x, y)
+    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+
+    # contour
+    ellipse_contour = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
+                        linewidth=1, color=color, fill=False, alpha=.8, zorder=0)
+
+    # x y standard deviation
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    mean_x = np.mean(x)
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+    mean_y = np.mean(y)
+
+    transf = transforms.Affine2D().rotate_deg(45).scale(scale_x, scale_y).translate(mean_x, mean_y)
+
+    ellipse_contour.set_transform(transf + ax.transData)
+
+    if fill:
+        ellipse_fill = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
+                               linewidth=1, color=color, fill=True, alpha=0.1, zorder=zorder)
+        ellipse_fill.set_transform(transf + ax.transData)
+        return ax.add_patch(ellipse_contour), ax.add_patch(ellipse_fill)
+    return ax.add_patch(ellipse_contour)
+
+
+def polygons_from_logreg(log_reg, bbox):
+    polygons = []
+    lines = []
+    for i in range(log_reg.coef_.shape[0]):
+        poly = bbox.copy()
+        for j in range(log_reg.coef_.shape[0]):
+            if i == j:
+                continue
+
+            # w[0]*x + w[1]*y + b = 0
+            w = log_reg.coef_[i] - log_reg.coef_[j]
+            b = log_reg.intercept_[i] - log_reg.intercept_[j]
+
+            new_poly = []
+            for k in range(len(poly)):
+                P = poly[k]  # current vertex
+                Q = poly[(k+1) % len(poly)]  # next one
+                fP = w @ P + b  # w[0]*P[0] + w[1]*P[1] + b
+                fQ = w @ Q + b  # w[0]*Q[0] + w[1]*Q[1] + b
+
+                if fP >= 0:  # P is on good side
+                    new_poly.append(P)
+                if fP * fQ < 0:  # edge is outside
+                    t = fP / (fP - fQ)
+                    I = P + t*(Q-P) # intersection
+                    new_poly.append(I)
+
+            poly = np.array(new_poly)
+            if len(poly) == 0:
+                break
+        polygons.append(poly)
+
+    edge_counts = {}
+    for poly in polygons:
+        for k in range(len(poly)):
+            p1 = poly[k]
+            p2 = poly[(k+1) % len(poly)]
+            p1_rounded = tuple(np.round(p1, 8))
+            p2_rounded = tuple(np.round(p2, 8))
+            key = tuple(sorted([p1_rounded, p2_rounded]))
+            edge_counts[key] = edge_counts.get(key, 0) + 1
+
+    # edges that appear in exactly 2 polygons are boundaries between them
+    for key, count in edge_counts.items():
+        if count == 2:
+            lines.append(key)
+
+    return polygons, lines
