@@ -266,13 +266,19 @@ def read_ROI_from_csv(file_path):
                     print(f"Skipping row with incorrect number of columns: {row}")
     except FileNotFoundError:
         print(f"File not found: {file_path}")
+        return None
     except Exception as e:
         print(f"An error occurred while reading the file: {str(e)}")
+        return None
 
     return np.array(ROI)
 
 def compute_area(ROI):
     '''Compute the area of a polygonal ROI using the shoelace formula'''
+    if ROI is None or len(ROI) < 3:
+        print("ROI is not a valid polygon")
+        return 0.0
+
     n = len(ROI)
     area = 0.0
 
