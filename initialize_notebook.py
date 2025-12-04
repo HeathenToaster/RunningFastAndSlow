@@ -28,9 +28,9 @@ def initialize_notebook(root=root, ):
     VSlesioned_rats = [
         'Raz10F', 'Raz11F', 'Raz13F', 'Raz16M',
                        'Raz30F', 'Raz31F','Raz33M', 'Raz34M', 'Raz35M',
-                       'Raz40F', 'Raz43M', 'Raz44M', 'Raz45M',
+                       'Raz40F',  'Raz44M', 'Raz45M', #'Raz43M',
                        'Raz56M', 'Raz57M',
-                       'Raz61F', 'Raz62F',
+                        'Raz62F', #'Raz61F',
                        ]
     sham_rats = [
         'Raz14F', 'Raz19M', 'Raz32F', 'Raz36M'
