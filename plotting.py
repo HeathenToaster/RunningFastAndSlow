@@ -720,10 +720,9 @@ def add_colored_intact(ax=None, handles=[], labels=[], text='Intact rats (n=15)'
         fig = ax.get_figure()
         fig.legend(handles=[*patches_cmaps_gradients, *handles], 
                 labels=[f'{text}', *labels],
-                loc=loc, bbox_to_anchor=bbox, 
-                                frameon=True, fontsize=5, markerscale=1, ncol=ncol,
-                                handler_map={list: HandlerTuple(ndivide=None, pad=0)},
-                                edgecolor='k', facecolor='w').get_frame().set_linewidth(.5)
+                loc=loc, bbox_to_anchor=bbox, ncol=ncol,
+                handler_map={list: HandlerTuple(ndivide=None, pad=0)},
+                ).get_frame().set_linewidth(.5)
     else:
         if handler_map is None:
             handler_map = {list: HandlerTuple(ndivide=None, pad=0)}
@@ -731,10 +730,9 @@ def add_colored_intact(ax=None, handles=[], labels=[], text='Intact rats (n=15)'
             handler_map.update({list: HandlerTuple(ndivide=None, pad=0)})
         ax.legend(handles=[*patches_cmaps_gradients, *handles], 
                 labels=[f'{text}', *labels],
-                loc=loc, bbox_to_anchor=bbox, 
-                                frameon=True, fontsize=5, markerscale=1, ncol=ncol,
-                                handler_map=handler_map,
-                                edgecolor='k', facecolor='w').get_frame().set_linewidth(.5)
+                loc=loc, bbox_to_anchor=bbox, ncol=ncol,
+                handler_map=handler_map,
+                ).get_frame().set_linewidth(.5)
 
 
 def add_colored_lesion(ax=None, handles=[], labels=[], text='Lesioned rats (n=13)', 
@@ -769,10 +767,9 @@ def add_colored_lesion(ax=None, handles=[], labels=[], text='Lesioned rats (n=13
     if not do_return:
         ax.legend(handles=[*patches_cmaps_gradients, *handles], 
                 labels=[f'{text}', *labels],
-                loc=loc, bbox_to_anchor=bbox, 
-                                frameon=True, fontsize=5, markerscale=1, ncol=ncol,
-                                handler_map={list: HandlerTuple(ndivide=None, pad=0)},
-                                edgecolor='k', facecolor='w').get_frame().set_linewidth(.5)
+                loc=loc, bbox_to_anchor=bbox, ncol=ncol,
+                handler_map={list: HandlerTuple(ndivide=None, pad=0)},
+                ).get_frame().set_linewidth(.5)
     else:
         return patches_cmaps_gradients
 

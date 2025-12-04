@@ -363,7 +363,7 @@ lines.linewidth: 1              # line width in points
 ## https://matplotlib.org/stable/api/axes_api.html#module-matplotlib.axes
 #axes.facecolor:     white   # axes background color
 #axes.edgecolor:     black   # axes edge color
-axes.linewidth:     .75     # edge line width
+axes.linewidth:     .5     # edge line width
 #axes.grid:          False   # display grid or not
 #axes.grid.axis:     both    # which axis the grid should apply to
 #axes.grid.which:    major   # grid lines at {major, minor, both} ticks
@@ -473,9 +473,9 @@ axes.unicode_minus: False  # use Unicode for the minus symbol rather than hyphen
 #xtick.bottom:        True    # draw ticks on the bottom side
 #xtick.labeltop:      False   # draw label on the top
 #xtick.labelbottom:   True    # draw label on the bottom
-xtick.major.size:    2.5     # major tick size in points
+xtick.major.size:    2     # major tick size in points
 #xtick.minor.size:    2       # minor tick size in points
-xtick.major.width:   .75     # major tick width in points
+xtick.major.width:   .5     # major tick width in points
 #xtick.minor.width:   0.6     # minor tick width in points
 xtick.major.pad:     2     # distance to major tick label in points
 #xtick.minor.pad:     3.4     # distance to the minor tick label in points
@@ -494,9 +494,9 @@ xtick.labelsize:     5  # font size of the tick labels
 #ytick.right:         False   # draw ticks on the right side
 #ytick.labelleft:     True    # draw tick labels on the left side
 #ytick.labelright:    False   # draw tick labels on the right side
-ytick.major.size:    2.5     # major tick size in points
+ytick.major.size:    2     # major tick size in points
 #ytick.minor.size:    2       # minor tick size in points
-ytick.major.width:   .75     # major tick width in points
+ytick.major.width:   .5     # major tick width in points
 #ytick.minor.width:   0.6     # minor tick width in points
 ytick.major.pad:     2     # distance to major tick label in points
 #ytick.minor.pad:     3.4     # distance to the minor tick label in points
@@ -524,11 +524,14 @@ ytick.labelsize:     5  # font size of the tick labels
 ## ***************************************************************************
 ## * LEGEND                                                                  *
 ## ***************************************************************************
+
+## !!!!!!!!!!  Fig2 DEFHIJ Manual color
+
 #legend.loc:           best
-#legend.frameon:       True     # if True, draw the legend on a background patch
+legend.frameon:       True     # if True, draw the legend on a background patch
 legend.framealpha:    0.6      # legend patch transparency
-#legend.facecolor:     inherit  # inherit from axes.facecolor; or color spec
-#legend.edgecolor:     0.8      # background patch boundary color
+legend.facecolor:     white  # inherit from axes.facecolor; or color spec
+legend.edgecolor:     white      # background patch boundary color
 #legend.fancybox:      True     # if True, use a rounded box for the
                                 # legend background, else a rectangle
 #legend.shadow:        False    # if True, give background a shadow effect
