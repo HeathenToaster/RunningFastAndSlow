@@ -127,7 +127,7 @@ def plot_BASEtrajectoryV2(animal, session, time, running_Xs, idle_Xs, lickL, lic
     ax1 = plt.gca()
     for i in range(0, len(blocks)):
         plt.axvspan(blocks[i][0], blocks[i][1],
-                    color='grey', alpha=rewardProbaBlock[i]/250,
+                    color='grey', alpha=rewardProbaBlock[i]/500,
                     label="%reward: " + str(rewardProbaBlock[i])
                     if (i == 0 or i == 1) else "")
     plt.plot(time, running_Xs, label="run", color="dodgerblue", linewidth=1)
@@ -222,8 +222,8 @@ def plot_figBinMean(ax, dataLeft, dataRight, color, ylim):
     ax.text(0.5, (mean_left + mean_right) / 2, f"diff = {diff:.2f}",
             ha='center', va='center', fontsize=10)
 
-    ax.axvspan(-0.5, 0.5, color='grey', alpha=10/250)
-    ax.axvspan(0.5, 1.5, color='grey', alpha=90/250)
+    ax.axvspan(-0.5, 0.5, color='grey', alpha=10/500)
+    ax.axvspan(0.5, 1.5, color='grey', alpha=90/500)
 
     ax.set_xlim(-0.5, 1.5)
     ax.set_ylim(ylim)
