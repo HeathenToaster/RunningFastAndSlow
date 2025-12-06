@@ -834,7 +834,7 @@ def plot_BASEtrajectoryV2(ax, time, running_Xs, idle_Xs, lickL, lickR,
 
     for i in range(0, len(blocks)):
         ax.axvspan(blocks[i][0], blocks[i][1],
-                   color='grey', alpha=rewardProbaBlock[i]/250,
+                   color='grey', alpha=rewardProbaBlock[i]/500,
                    label="%reward: " + str(rewardProbaBlock[i])
                    if (i == 0 or i == 1) else "")
     ax.plot(time, running_Xs, label="run", color="dodgerblue", linewidth=1)
@@ -963,7 +963,7 @@ def plot_figBin(ax, data, rewardProbaBlock, blocks, barplotaxes, stat, color='k'
         ax = plt.gca()
     for i in range(0, len(blocks)):
         ax.axvspan(blocks[i][0]/60, blocks[i][1]/60, color='grey',
-                   alpha=rewardProbaBlock[i]/250,
+                   alpha=rewardProbaBlock[i]/500,
                    label="%reward: " + str(rewardProbaBlock[i]) if (i == 0 or i == 1) else "")
         if scatter:
             ax.scatter(np.random.normal(((blocks[i][1] + blocks[i][0])/120),
