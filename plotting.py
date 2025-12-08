@@ -12,8 +12,10 @@ from scipy import stats
 import pandas as pd
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-from matplotlib.patches import Ellipse
+from matplotlib.patches import Ellipse, FancyArrowPatch
 import matplotlib.transforms as transforms
+from matplotlib.legend_handler import HandlerBase
+
 from scipy.optimize import curve_fit
 
 from utils import *
@@ -1669,3 +1671,34 @@ def polygons_from_logreg(log_reg, bbox):
             lines.append(key)
 
     return polygons, lines
+
+
+class DashedArrowHandler(HandlerBase):
+    def create_artists(self, legend, orig_handle, xdescent, ydescent,
+                    width, height, fontsize, trans):
+        scale = 1.4
+        extra = (scale - 1) * width / 2
+        start_x = -extra
+        end_x = width + extra
+
+        y = 0.5 * height
+
+        # Dashed shaft
+        shaft = FancyArrowPatch((start_x, y), (end_x, y),
+                                        arrowstyle='-',
+                                        linestyle=(0, (2, 2)),
+                                        lw=1,
+                                        color='k',
+                                        mutation_scale=fontsize)
+        # Solid head
+        head = FancyArrowPatch((start_x + 0.8*(end_x-start_x), y), (end_x, y),
+                                        arrowstyle='-|>,head_width=.3,head_length=.8',
+                                        lw=0,
+                                        facecolor='k',
+                                        edgecolor='k',
+                                        mutation_scale=fontsize)
+
+        shaft.set_transform(trans)
+        head.set_transform(trans)
+        return [shaft, head]
+
