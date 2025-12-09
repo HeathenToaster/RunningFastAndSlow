@@ -1567,8 +1567,8 @@ def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, 
     if show_ex:
         ax.plot(2, params['ex_fit'], color='black', marker='^', zorder=10, markersize=2, linewidth=0, label='Example session')
 
-
-    ax.axhline(0, color='dimgray', linestyle='--', linewidth=1, alpha=1, zorder=0, xmin=.1, xmax=.9)
+    if params['yticks'][0] != 0 and params['yticks'][-1] != 0:
+        ax.axhline(0, color='dimgray', linestyle='--', linewidth=1, alpha=1, zorder=0, xmin=.1, xmax=.9)
 
     ax.set_xlim(x[0], x[-1])
     ax.set_xticks(x)
@@ -1580,7 +1580,7 @@ def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, 
 
     ax.set_ylim(params['yticks'][0], params['yticks'][-1])
     ax.set_yticks(params['yticks'])
-    if params['ylabel'] != 'Run Speed':
+    if params['ylabel'] != 'Run Speed (cm/s)':
         ax.yaxis.set_major_formatter('{x:<5.2f}')
     if show_ylabel:
         ax.set_ylabel(params['ylabel'])
