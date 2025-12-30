@@ -1555,7 +1555,7 @@ def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, 
         x = [0, 1, 2, 3, 4]
         conds = ["20", "10", "2", "rev10", "rev20"]
         xticklabels = ["20", "10", "±2", "-10", "-20"]
-        _ = r'$v_{belt}$'
+        _ = r'$v_{\mathrm{belt}}$'
         xlabel = f'{_} (cm/s)'
 
     for animal in animal_list:
