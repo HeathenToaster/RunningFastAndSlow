@@ -1341,7 +1341,7 @@ def across_session_plot(plot, animal_list, session_list, dataLeft, dataRight, ex
                 ax.plot(x, (g/a, h/b, i/c, j/d, k/e, l/f), marker='o', markersize=6, color=marker[animal][0], linestyle=marker[animal][2])
     return ax
 
-def add_panel_label(ax, label, offset_pixels=(0, 0), verbose=False, **text_kwargs):
+def add_panel_label(ax, label, offset_pixels=(0, 0), verbose=False, show=True, **text_kwargs):
     """
     Add a label (e.g. 'A', 'B', 'C') at a position relative to the ylabel
     (if present) or the left axis spine (if not) and the top of the y-axis.
@@ -1388,16 +1388,21 @@ def add_panel_label(ax, label, offset_pixels=(0, 0), verbose=False, **text_kwarg
     x_fig, y_fig = inv.transform((x_disp, y_disp))
     if verbose:
         print(f"Panel {label}: ({x_fig}, {y_fig})")
-    fig.text(x_fig, y_fig, label, ha='right', va='bottom', **text_kwargs)
+    if show:
+        fig.text(x_fig, y_fig, label, ha='right', va='bottom', **text_kwargs)
+    return (x_fig, y_fig)
 
 
-def add_all_letters(axs, letters, verbose=False):
+def add_all_letters(axs, letters, verbose=False, show=True):
     assert len(axs) == len(letters), "Number of axes must match number of letters"
-
+    xs, ys = [], []
     fig = axs[0].figure
     fig.canvas.draw()
     for ax, label in zip(axs, letters):
-        add_panel_label(ax, label, offset_pixels=(0, 0), fontsize=7, fontweight="bold", verbose=verbose)
+        x, y = add_panel_label(ax, label, offset_pixels=(0, 0), fontsize=7, fontweight="bold", verbose=verbose, show=show)
+        xs.append(x)
+        ys.append(y)
+    return xs, ys
 
 def add_one_letter(ax, letter, x, y):
     fig = ax.figure
@@ -1548,7 +1553,7 @@ def plot_model_parameter(params, rat_markers, dist_or_tm='dist', show_ex=False, 
     if dist_or_tm == 'dist':
         x = [0, 1, 2]
         conds = ["60", "90", "120"]
-        xticklabels = ["60", "90", "120"]
+        xticklabels = ["29", "62", "94"]
         _ = r'$d$'
         xlabel = f'{_} (cm)'
     elif dist_or_tm == 'tm':
